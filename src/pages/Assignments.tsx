@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, BookOpen, Clock, Trash2, Check, Filter } from "lucide-react";
@@ -23,6 +23,7 @@ import {
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Assignment, Subject } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { SubjectManager } from "@/components/SubjectManager";
 
 const defaultSubjects: Subject[] = [
   { id: "1", name: "Mathematics", color: "bg-blue-500" },
@@ -36,9 +37,17 @@ const defaultSubjects: Subject[] = [
 
 const Assignments = () => {
   const [assignments, setAssignments] = useLocalStorage<Assignment[]>("brainbrew-assignments", []);
-  const [subjects] = useLocalStorage<Subject[]>("brainbrew-subjects", defaultSubjects);
+  const [subjects, setSubjects] = useLocalStorage<Subject[]>("brainbrew-subjects", defaultSubjects);
   const [filterSubject, setFilterSubject] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Calculate assignment counts per subject
+  const assignmentCounts = useMemo(() => {
+    return assignments.reduce((acc, assignment) => {
+      acc[assignment.subject] = (acc[assignment.subject] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [assignments]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     title: "",
@@ -126,18 +135,24 @@ const Assignments = () => {
             <h1 className="text-2xl font-bold text-foreground">Assignments</h1>
             <p className="text-muted-foreground">Track your tasks by subject</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Assignment
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New Assignment</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
+          <div className="flex gap-3">
+            <SubjectManager
+              subjects={subjects}
+              onSubjectsChange={setSubjects}
+              assignmentCounts={assignmentCounts}
+            />
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Assignment
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>New Assignment</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
                 <Input
                   placeholder="Assignment title"
                   value={newAssignment.title}
@@ -189,9 +204,10 @@ const Assignments = () => {
                 <Button onClick={createAssignment} className="w-full">
                   Create Assignment
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
