@@ -11,37 +11,31 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 type TimerMode = "work" | "shortBreak" | "longBreak";
 
-interface TimerSettings {
-  work: number;
-  shortBreak: number;
-  longBreak: number;
-}
-
 export function PomodoroTimer() {
-  const [settings, setSettings] = useState<TimerSettings>({
-    work: 25,
-    shortBreak: 5,
-    longBreak: 15,
-  });
+  const { preferences, updateTimerSettings, updateStreakSettings } = usePreferences();
+  const { timerSettings } = preferences;
+  
   const [mode, setMode] = useState<TimerMode>("work");
-  const [timeLeft, setTimeLeft] = useState(settings.work * 60);
+  const [timeLeft, setTimeLeft] = useState(timerSettings.work * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
+  const [localSettings, setLocalSettings] = useState(timerSettings);
 
-  const totalTime = settings[mode] * 60;
+  const totalTime = timerSettings[mode] * 60;
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
 
   const resetTimer = useCallback(() => {
-    setTimeLeft(settings[mode] * 60);
+    setTimeLeft(timerSettings[mode] * 60);
     setIsRunning(false);
-  }, [mode, settings]);
+  }, [mode, timerSettings]);
 
   useEffect(() => {
-    setTimeLeft(settings[mode] * 60);
-  }, [mode, settings]);
+    setTimeLeft(timerSettings[mode] * 60);
+  }, [mode, timerSettings]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -53,24 +47,46 @@ export function PomodoroTimer() {
     } else if (timeLeft === 0) {
       setIsRunning(false);
       if (mode === "work") {
-        setSessions((prev) => prev + 1);
-        if ((sessions + 1) % 4 === 0) {
+        const newSessions = sessions + 1;
+        setSessions(newSessions);
+        
+        // Update streak if goal reached
+        if (newSessions >= preferences.streakSettings.dailyGoal) {
+          const today = new Date().toDateString();
+          if (preferences.streakSettings.lastActiveDate !== today) {
+            const newStreak = preferences.streakSettings.currentStreak + 1;
+            updateStreakSettings({
+              currentStreak: newStreak,
+              longestStreak: Math.max(newStreak, preferences.streakSettings.longestStreak),
+              lastActiveDate: today,
+            });
+          }
+        }
+        
+        if (newSessions % 4 === 0) {
           setMode("longBreak");
+          if (timerSettings.autoStartBreaks) setIsRunning(true);
         } else {
           setMode("shortBreak");
+          if (timerSettings.autoStartBreaks) setIsRunning(true);
         }
       } else {
         setMode("work");
+        if (timerSettings.autoStartPomodoros) setIsRunning(true);
       }
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft, mode, sessions]);
+  }, [isRunning, timeLeft, mode, sessions, timerSettings, preferences.streakSettings, updateStreakSettings]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleSaveSettings = () => {
+    updateTimerSettings(localSettings);
   };
 
   const modeColors = {
@@ -103,9 +119,9 @@ export function PomodoroTimer() {
                   <Input
                     id="work"
                     type="number"
-                    value={settings.work}
+                    value={localSettings.work}
                     onChange={(e) =>
-                      setSettings({ ...settings, work: Number(e.target.value) })
+                      setLocalSettings({ ...localSettings, work: Number(e.target.value) })
                     }
                   />
                 </div>
@@ -114,9 +130,9 @@ export function PomodoroTimer() {
                   <Input
                     id="shortBreak"
                     type="number"
-                    value={settings.shortBreak}
+                    value={localSettings.shortBreak}
                     onChange={(e) =>
-                      setSettings({ ...settings, shortBreak: Number(e.target.value) })
+                      setLocalSettings({ ...localSettings, shortBreak: Number(e.target.value) })
                     }
                   />
                 </div>
@@ -125,12 +141,13 @@ export function PomodoroTimer() {
                   <Input
                     id="longBreak"
                     type="number"
-                    value={settings.longBreak}
+                    value={localSettings.longBreak}
                     onChange={(e) =>
-                      setSettings({ ...settings, longBreak: Number(e.target.value) })
+                      setLocalSettings({ ...localSettings, longBreak: Number(e.target.value) })
                     }
                   />
                 </div>
+                <Button onClick={handleSaveSettings}>Save Settings</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -212,6 +229,24 @@ export function PomodoroTimer() {
           </Button>
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
             {sessions}
+          </div>
+        </div>
+
+        {/* Progress towards daily goal */}
+        <div className="mt-4 pt-4 border-t">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Daily Goal</span>
+            <span className="font-medium text-foreground">
+              {sessions}/{preferences.streakSettings.dailyGoal}
+            </span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((sessions / preferences.streakSettings.dailyGoal) * 100, 100)}%` }}
+              transition={{ duration: 0.5 }}
+            />
           </div>
         </div>
       </div>

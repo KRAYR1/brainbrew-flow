@@ -6,19 +6,23 @@ import {
   BookOpen, 
   Calendar, 
   Flame,
-  Brain
+  Brain,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
 const navItems = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/notes", icon: FileText, label: "Notes" },
   { path: "/assignments", icon: BookOpen, label: "Assignments" },
   { path: "/calendar", icon: Calendar, label: "Calendar" },
+  { path: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export function Sidebar() {
   const location = useLocation();
+  const { preferences } = usePreferences();
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-sidebar-border bg-sidebar">
@@ -69,8 +73,12 @@ export function Sidebar() {
             <Flame className="h-5 w-5" />
             <span className="text-sm font-semibold">Current Streak</span>
           </div>
-          <p className="mt-1 text-2xl font-bold text-foreground">7 Days</p>
-          <p className="text-xs text-muted-foreground">Keep it going!</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {preferences.streakSettings.currentStreak} Days
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Goal: {preferences.streakSettings.dailyGoal} pomodoros/day
+          </p>
         </div>
       </div>
     </aside>
