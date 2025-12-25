@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import { usePreferences } from "@/contexts/PreferencesContext";
 
-const quotes = [
+const defaultQuotes = [
   { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
   { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
   { text: "Success is the sum of small efforts repeated day in and day out.", author: "Robert Collier" },
@@ -14,15 +15,24 @@ const quotes = [
 ];
 
 export function MotivationalQuote() {
-  const [currentQuote, setCurrentQuote] = useState(quotes[0]);
+  const { preferences } = usePreferences();
+  const allQuotes = [...defaultQuotes, ...preferences.customQuotes];
+  const [currentQuote, setCurrentQuote] = useState(allQuotes[0]);
 
   useEffect(() => {
+    // Update quotes when custom quotes change
+    setCurrentQuote(allQuotes[Math.floor(Math.random() * allQuotes.length)]);
+    
     const interval = setInterval(() => {
-      setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-    }, 30000); // Change every 30 seconds
+      setCurrentQuote(allQuotes[Math.floor(Math.random() * allQuotes.length)]);
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [preferences.customQuotes.length]);
+
+  if (!preferences.appearance.showMotivationalQuotes) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-xs">
