@@ -1,6 +1,8 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
+export type SoundType = "bell" | "chime" | "digital" | "gentle";
+
 export interface UserPreferences {
   // Timer settings
   timerSettings: {
@@ -9,6 +11,9 @@ export interface UserPreferences {
     longBreak: number;
     autoStartBreaks: boolean;
     autoStartPomodoros: boolean;
+    soundEnabled: boolean;
+    soundType: SoundType;
+    soundVolume: number;
   };
   // Appearance
   appearance: {
@@ -41,6 +46,9 @@ const defaultPreferences: UserPreferences = {
     longBreak: 15,
     autoStartBreaks: false,
     autoStartPomodoros: false,
+    soundEnabled: true,
+    soundType: "bell",
+    soundVolume: 0.7,
   },
   appearance: {
     accentColor: "indigo",

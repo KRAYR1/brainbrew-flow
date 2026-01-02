@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Notes from "./pages/Notes";
 import Assignments from "./pages/Assignments";
 import CalendarPage from "./pages/Calendar";
+import Timetable from "./pages/Timetable";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/notes" element={<Notes />} />
             <Route path="/assignments" element={<Assignments />} />
             <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/timetable" element={<Timetable />} />
             <Route path="/settings" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

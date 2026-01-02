@@ -7,7 +7,8 @@ import {
   Calendar, 
   Flame,
   Brain,
-  Settings
+  Settings,
+  Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -17,6 +18,7 @@ const navItems = [
   { path: "/notes", icon: FileText, label: "Notes" },
   { path: "/assignments", icon: BookOpen, label: "Assignments" },
   { path: "/calendar", icon: Calendar, label: "Calendar" },
+  { path: "/timetable", icon: Clock, label: "Study Timetable" },
   { path: "/settings", icon: Settings, label: "Settings" },
 ];
 
