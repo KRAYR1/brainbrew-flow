@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -16,7 +16,8 @@ import {
   Trash2,
   Edit2,
   Plus,
-  X
+  X,
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useToast } from "@/hooks/use-toast";
 import { Subject } from "@/types";
+import { SubjectManager } from "@/components/SubjectManager";
 import { 
   DailyRoutine, 
   StudyTimetable, 
@@ -93,7 +95,7 @@ const activityColors: Record<string, string> = {
 };
 
 const Timetable = () => {
-  const [subjects] = useLocalStorage<Subject[]>("brainbrew-subjects", defaultSubjects);
+  const [subjects, setSubjects] = useLocalStorage<Subject[]>("brainbrew-subjects", defaultSubjects);
   const [timetables, setTimetables] = useLocalStorage<StudyTimetable[]>("brainbrew-timetables", []);
   const [routine, setRoutine] = useState<DailyRoutine>(defaultRoutine);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -108,6 +110,23 @@ const Timetable = () => {
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>("monday");
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const { toast } = useToast();
+
+  // Calculate subject usage in timetables for the SubjectManager
+  const subjectUsageCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    timetables.forEach(tt => {
+      if (tt.weeklySchedule) {
+        Object.values(tt.weeklySchedule).forEach(slots => {
+          slots.forEach(slot => {
+            if (slot.activity === "study" && slot.subject) {
+              counts[slot.subject] = (counts[slot.subject] || 0) + 1;
+            }
+          });
+        });
+      }
+    });
+    return counts;
+  }, [timetables]);
 
   const parseTime = (time: string): number => {
     const [hours, minutes] = time.split(":").map(Number);
@@ -374,13 +393,19 @@ const Timetable = () => {
             <h1 className="text-2xl font-bold text-foreground">Study Timetable</h1>
             <p className="text-muted-foreground">Create a personalized weekly study schedule</p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Sparkles className="h-4 w-4" />
-                Generate Timetable
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-3">
+            <SubjectManager
+              subjects={subjects}
+              onSubjectsChange={setSubjects}
+              assignmentCounts={subjectUsageCounts}
+            />
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Generate Timetable
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Your Weekly Timetable</DialogTitle>
@@ -561,7 +586,8 @@ const Timetable = () => {
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {/* Saved Timetables */}

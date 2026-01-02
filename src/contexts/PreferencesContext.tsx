@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export type SoundType = "bell" | "chime" | "digital" | "gentle";
+export type ThemeType = "light" | "dark" | "system";
 
 export interface UserPreferences {
   // Timer settings
@@ -17,6 +18,7 @@ export interface UserPreferences {
   };
   // Appearance
   appearance: {
+    theme: ThemeType;
     accentColor: string;
     showMotivationalQuotes: boolean;
     compactMode: boolean;
@@ -51,6 +53,7 @@ const defaultPreferences: UserPreferences = {
     soundVolume: 0.7,
   },
   appearance: {
+    theme: "system",
     accentColor: "indigo",
     showMotivationalQuotes: true,
     compactMode: false,
