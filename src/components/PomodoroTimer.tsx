@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, RotateCcw, Settings } from "lucide-react";
+import { Play, Pause, RotateCcw, Settings, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,13 +11,24 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePreferences } from "@/contexts/PreferencesContext";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { usePreferences, SoundType } from "@/contexts/PreferencesContext";
+import { useTimerSound } from "@/hooks/useTimerSound";
 
 type TimerMode = "work" | "shortBreak" | "longBreak";
 
 export function PomodoroTimer() {
   const { preferences, updateTimerSettings, updateStreakSettings } = usePreferences();
   const { timerSettings } = preferences;
+  const { playSound } = useTimerSound();
   
   const [mode, setMode] = useState<TimerMode>("work");
   const [timeLeft, setTimeLeft] = useState(timerSettings.work * 60);
@@ -46,6 +57,12 @@ export function PomodoroTimer() {
       }, 1000);
     } else if (timeLeft === 0) {
       setIsRunning(false);
+      
+      // Play sound notification
+      if (timerSettings.soundEnabled) {
+        playSound(timerSettings.soundType, timerSettings.soundVolume);
+      }
+      
       if (mode === "work") {
         const newSessions = sessions + 1;
         setSessions(newSessions);
@@ -77,7 +94,7 @@ export function PomodoroTimer() {
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft, mode, sessions, timerSettings, preferences.streakSettings, updateStreakSettings]);
+  }, [isRunning, timeLeft, mode, sessions, timerSettings, preferences.streakSettings, updateStreakSettings, playSound]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -147,6 +164,64 @@ export function PomodoroTimer() {
                     }
                   />
                 </div>
+                
+                {/* Sound Settings */}
+                <div className="border-t pt-4 mt-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      {localSettings.soundEnabled ? (
+                        <Volume2 className="h-4 w-4 text-primary" />
+                      ) : (
+                        <VolumeX className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <Label htmlFor="soundEnabled">Sound Notification</Label>
+                    </div>
+                    <Switch
+                      id="soundEnabled"
+                      checked={localSettings.soundEnabled}
+                      onCheckedChange={(checked) =>
+                        setLocalSettings({ ...localSettings, soundEnabled: checked })
+                      }
+                    />
+                  </div>
+                  
+                  {localSettings.soundEnabled && (
+                    <>
+                      <div className="grid gap-2 mb-4">
+                        <Label>Notification Sound</Label>
+                        <Select
+                          value={localSettings.soundType}
+                          onValueChange={(value: SoundType) =>
+                            setLocalSettings({ ...localSettings, soundType: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="bell">Bell</SelectItem>
+                            <SelectItem value="chime">Chime</SelectItem>
+                            <SelectItem value="digital">Digital</SelectItem>
+                            <SelectItem value="gentle">Gentle</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Volume: {Math.round(localSettings.soundVolume * 100)}%</Label>
+                        <Slider
+                          value={[localSettings.soundVolume]}
+                          onValueChange={([value]) =>
+                            setLocalSettings({ ...localSettings, soundVolume: value })
+                          }
+                          min={0}
+                          max={1}
+                          step={0.1}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+                
                 <Button onClick={handleSaveSettings}>Save Settings</Button>
               </div>
             </DialogContent>
