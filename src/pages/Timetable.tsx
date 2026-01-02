@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -11,9 +11,12 @@ import {
   Dumbbell,
   Sparkles,
   ChevronRight,
+  ChevronLeft,
   Calendar,
   Trash2,
-  Edit2
+  Edit2,
+  Plus,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +42,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useToast } from "@/hooks/use-toast";
 import { Subject } from "@/types";
-import { DailyRoutine, StudyTimetable, TimeSlot } from "@/types/timetable";
+import { 
+  DailyRoutine, 
+  StudyTimetable, 
+  TimeSlot, 
+  DayOfWeek, 
+  DAYS_OF_WEEK, 
+  DAY_LABELS, 
+  DAY_FULL_LABELS,
+  WeeklySchedule 
+} from "@/types/timetable";
 
 const defaultSubjects: Subject[] = [
   { id: "1", name: "Mathematics", color: "bg-blue-500" },
@@ -85,11 +97,16 @@ const Timetable = () => {
   const [timetables, setTimetables] = useLocalStorage<StudyTimetable[]>("brainbrew-timetables", []);
   const [routine, setRoutine] = useState<DailyRoutine>(defaultRoutine);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(["monday", "tuesday", "wednesday", "thursday", "friday"]);
   const [timetableName, setTimetableName] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditSlotDialogOpen, setIsEditSlotDialogOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<{ day: DayOfWeek; slot: TimeSlot } | null>(null);
   const [activeTimetable, setActiveTimetable] = useState<StudyTimetable | null>(
     timetables.length > 0 ? timetables[0] : null
   );
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>("monday");
+  const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const { toast } = useToast();
 
   const parseTime = (time: string): number => {
@@ -103,17 +120,7 @@ const Timetable = () => {
     return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
   };
 
-  const generateTimetable = () => {
-    if (selectedSubjects.length === 0) {
-      toast({ title: "Please select at least one subject", variant: "destructive" });
-      return;
-    }
-
-    if (!timetableName.trim()) {
-      toast({ title: "Please enter a name for your timetable", variant: "destructive" });
-      return;
-    }
-
+  const generateDaySlots = (daySubjects: string[]): TimeSlot[] => {
     const slots: TimeSlot[] = [];
     let currentTime = parseTime(routine.wakeUpTime);
     const sleepTime = parseTime(routine.sleepTime);
@@ -125,12 +132,11 @@ const Timetable = () => {
     const mealDuration = 30;
     const breakDuration = 15;
     const exerciseDuration = 60;
-    const studySessionDuration = 50; // Pomodoro-style
+    const studySessionDuration = 50;
     
     let studyMinutesRemaining = routine.studyHoursPerDay * 60;
     let subjectIndex = 0;
 
-    // Fixed events
     const fixedEvents: Array<{ time: number; duration: number; type: TimeSlot["activity"]; label: string }> = [
       { time: breakfastTime, duration: mealDuration, type: "meal", label: "Breakfast" },
       { time: lunchTime, duration: mealDuration, type: "meal", label: "Lunch" },
@@ -143,18 +149,14 @@ const Timetable = () => {
 
     fixedEvents.sort((a, b) => a.time - b.time);
 
-    // Generate slots
     while (currentTime < sleepTime) {
-      // Check for fixed events
       const nextEvent = fixedEvents.find(e => e.time >= currentTime && e.time < currentTime + 60);
       
       if (nextEvent && currentTime <= nextEvent.time) {
-        // Add free time before event if there's a gap
         if (nextEvent.time > currentTime) {
           const gapDuration = nextEvent.time - currentTime;
-          if (gapDuration >= studySessionDuration && studyMinutesRemaining > 0) {
-            // Add study session
-            const subject = selectedSubjects[subjectIndex % selectedSubjects.length];
+          if (gapDuration >= studySessionDuration && studyMinutesRemaining > 0 && daySubjects.length > 0) {
+            const subject = daySubjects[subjectIndex % daySubjects.length];
             slots.push({
               id: Date.now().toString() + Math.random(),
               startTime: formatTimeFromMinutes(currentTime),
@@ -166,7 +168,6 @@ const Timetable = () => {
             studyMinutesRemaining -= studySessionDuration;
             subjectIndex++;
 
-            // Add break
             if (currentTime + breakDuration <= nextEvent.time) {
               slots.push({
                 id: Date.now().toString() + Math.random(),
@@ -189,7 +190,6 @@ const Timetable = () => {
           }
         }
 
-        // Add the fixed event
         slots.push({
           id: Date.now().toString() + Math.random(),
           startTime: formatTimeFromMinutes(nextEvent.time),
@@ -199,9 +199,8 @@ const Timetable = () => {
         });
         currentTime = nextEvent.time + nextEvent.duration;
         fixedEvents.splice(fixedEvents.indexOf(nextEvent), 1);
-      } else if (studyMinutesRemaining > 0 && currentTime + studySessionDuration <= sleepTime) {
-        // Add study session
-        const subject = selectedSubjects[subjectIndex % selectedSubjects.length];
+      } else if (studyMinutesRemaining > 0 && currentTime + studySessionDuration <= sleepTime && daySubjects.length > 0) {
+        const subject = daySubjects[subjectIndex % daySubjects.length];
         slots.push({
           id: Date.now().toString() + Math.random(),
           startTime: formatTimeFromMinutes(currentTime),
@@ -213,7 +212,6 @@ const Timetable = () => {
         studyMinutesRemaining -= studySessionDuration;
         subjectIndex++;
 
-        // Add break after study
         if (currentTime + breakDuration <= sleepTime && studyMinutesRemaining > 0) {
           slots.push({
             id: Date.now().toString() + Math.random(),
@@ -225,7 +223,6 @@ const Timetable = () => {
           currentTime += breakDuration;
         }
       } else {
-        // Free time
         const nextFixedEvent = fixedEvents[0];
         const endTime = nextFixedEvent ? Math.min(nextFixedEvent.time, sleepTime) : sleepTime;
         
@@ -243,13 +240,38 @@ const Timetable = () => {
         }
       }
     }
+    return slots;
+  };
+
+  const generateTimetable = () => {
+    if (selectedSubjects.length === 0) {
+      toast({ title: "Please select at least one subject", variant: "destructive" });
+      return;
+    }
+
+    if (!timetableName.trim()) {
+      toast({ title: "Please enter a name for your timetable", variant: "destructive" });
+      return;
+    }
+
+    if (selectedDays.length === 0) {
+      toast({ title: "Please select at least one day", variant: "destructive" });
+      return;
+    }
+
+    const weeklySchedule: WeeklySchedule = {};
+    selectedDays.forEach(day => {
+      weeklySchedule[day] = generateDaySlots(selectedSubjects);
+    });
 
     const newTimetable: StudyTimetable = {
       id: Date.now().toString(),
       name: timetableName,
       routine,
       subjects: selectedSubjects,
-      generatedSlots: slots,
+      generatedSlots: weeklySchedule[selectedDays[0]] || [],
+      weeklySchedule,
+      activeDays: selectedDays,
       createdAt: new Date().toISOString(),
     };
 
@@ -258,7 +280,8 @@ const Timetable = () => {
     setIsCreateDialogOpen(false);
     setTimetableName("");
     setSelectedSubjects([]);
-    toast({ title: "Timetable generated successfully!" });
+    setSelectedDays(["monday", "tuesday", "wednesday", "thursday", "friday"]);
+    toast({ title: "Weekly timetable generated!" });
   };
 
   const deleteTimetable = (id: string) => {
@@ -270,9 +293,72 @@ const Timetable = () => {
     toast({ title: "Timetable deleted" });
   };
 
+  const updateSlot = (day: DayOfWeek, slotId: string, updates: Partial<TimeSlot>) => {
+    if (!activeTimetable?.weeklySchedule) return;
+
+    const updatedSchedule = { ...activeTimetable.weeklySchedule };
+    updatedSchedule[day] = updatedSchedule[day].map(slot => 
+      slot.id === slotId ? { ...slot, ...updates } : slot
+    );
+
+    const updatedTimetable = { ...activeTimetable, weeklySchedule: updatedSchedule };
+    setActiveTimetable(updatedTimetable);
+    setTimetables(timetables.map(t => t.id === updatedTimetable.id ? updatedTimetable : t));
+  };
+
+  const deleteSlot = (day: DayOfWeek, slotId: string) => {
+    if (!activeTimetable?.weeklySchedule) return;
+
+    const updatedSchedule = { ...activeTimetable.weeklySchedule };
+    updatedSchedule[day] = updatedSchedule[day].filter(slot => slot.id !== slotId);
+
+    const updatedTimetable = { ...activeTimetable, weeklySchedule: updatedSchedule };
+    setActiveTimetable(updatedTimetable);
+    setTimetables(timetables.map(t => t.id === updatedTimetable.id ? updatedTimetable : t));
+    toast({ title: "Slot deleted" });
+  };
+
+  const addSlot = (day: DayOfWeek) => {
+    if (!activeTimetable?.weeklySchedule) return;
+
+    const newSlot: TimeSlot = {
+      id: Date.now().toString() + Math.random(),
+      startTime: "09:00",
+      endTime: "09:50",
+      activity: "study",
+      subject: selectedSubjects[0] || subjects[0]?.name || "Study",
+    };
+
+    const updatedSchedule = { ...activeTimetable.weeklySchedule };
+    updatedSchedule[day] = [...(updatedSchedule[day] || []), newSlot];
+
+    const updatedTimetable = { ...activeTimetable, weeklySchedule: updatedSchedule };
+    setActiveTimetable(updatedTimetable);
+    setTimetables(timetables.map(t => t.id === updatedTimetable.id ? updatedTimetable : t));
+    toast({ title: "Slot added" });
+  };
+
   const getSubjectColor = (subjectName: string) => {
     const subject = subjects.find((s) => s.name === subjectName);
     return subject?.color || "bg-gray-500";
+  };
+
+  const getDaySlots = (day: DayOfWeek): TimeSlot[] => {
+    if (!activeTimetable) return [];
+    return activeTimetable.weeklySchedule?.[day] || activeTimetable.generatedSlots || [];
+  };
+
+  const openEditSlotDialog = (day: DayOfWeek, slot: TimeSlot) => {
+    setEditingSlot({ day, slot: { ...slot } });
+    setIsEditSlotDialogOpen(true);
+  };
+
+  const saveEditedSlot = () => {
+    if (!editingSlot) return;
+    updateSlot(editingSlot.day, editingSlot.slot.id, editingSlot.slot);
+    setIsEditSlotDialogOpen(false);
+    setEditingSlot(null);
+    toast({ title: "Slot updated" });
   };
 
   return (
@@ -286,7 +372,7 @@ const Timetable = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Study Timetable</h1>
-            <p className="text-muted-foreground">Create a personalized study schedule</p>
+            <p className="text-muted-foreground">Create a personalized weekly study schedule</p>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -297,7 +383,7 @@ const Timetable = () => {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create Your Study Timetable</DialogTitle>
+                <DialogTitle>Create Your Weekly Timetable</DialogTitle>
               </DialogHeader>
               <div className="space-y-6 py-4">
                 {/* Timetable Name */}
@@ -308,6 +394,38 @@ const Timetable = () => {
                     value={timetableName}
                     onChange={(e) => setTimetableName(e.target.value)}
                   />
+                </div>
+
+                {/* Day Selection */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Active Days
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {DAYS_OF_WEEK.map((day) => (
+                      <label
+                        key={day}
+                        className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer transition-all ${
+                          selectedDays.includes(day)
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selectedDays.includes(day)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedDays([...selectedDays, day]);
+                            } else {
+                              setSelectedDays(selectedDays.filter((d) => d !== day));
+                            }
+                          }}
+                        />
+                        <span className="text-sm font-medium">{DAY_FULL_LABELS[day]}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Daily Routine */}
@@ -439,7 +557,7 @@ const Timetable = () => {
 
                 <Button onClick={generateTimetable} className="w-full gap-2">
                   <Sparkles className="h-4 w-4" />
-                  Generate My Timetable
+                  Generate Weekly Timetable
                 </Button>
               </div>
             </DialogContent>
@@ -466,6 +584,104 @@ const Timetable = () => {
           </div>
         )}
 
+        {/* Edit Slot Dialog */}
+        <Dialog open={isEditSlotDialogOpen} onOpenChange={setIsEditSlotDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Time Slot</DialogTitle>
+            </DialogHeader>
+            {editingSlot && (
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Start Time</Label>
+                    <Input
+                      type="time"
+                      value={editingSlot.slot.startTime}
+                      onChange={(e) => setEditingSlot({
+                        ...editingSlot,
+                        slot: { ...editingSlot.slot, startTime: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>End Time</Label>
+                    <Input
+                      type="time"
+                      value={editingSlot.slot.endTime}
+                      onChange={(e) => setEditingSlot({
+                        ...editingSlot,
+                        slot: { ...editingSlot.slot, endTime: e.target.value }
+                      })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Activity</Label>
+                  <Select
+                    value={editingSlot.slot.activity}
+                    onValueChange={(value: TimeSlot["activity"]) => setEditingSlot({
+                      ...editingSlot,
+                      slot: { ...editingSlot.slot, activity: value }
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="study">Study</SelectItem>
+                      <SelectItem value="break">Break</SelectItem>
+                      <SelectItem value="meal">Meal</SelectItem>
+                      <SelectItem value="exercise">Exercise</SelectItem>
+                      <SelectItem value="free">Free Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editingSlot.slot.activity === "study" && (
+                  <div className="space-y-2">
+                    <Label>Subject</Label>
+                    <Select
+                      value={editingSlot.slot.subject || ""}
+                      onValueChange={(value) => setEditingSlot({
+                        ...editingSlot,
+                        slot: { ...editingSlot.slot, subject: value }
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject.id} value={subject.name}>
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${subject.color}`} />
+                              {subject.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {editingSlot.slot.activity !== "study" && (
+                  <div className="space-y-2">
+                    <Label>Label</Label>
+                    <Input
+                      value={editingSlot.slot.label || ""}
+                      onChange={(e) => setEditingSlot({
+                        ...editingSlot,
+                        slot: { ...editingSlot.slot, label: e.target.value }
+                      })}
+                      placeholder="e.g., Lunch, Short Break..."
+                    />
+                  </div>
+                )}
+                <Button onClick={saveEditedSlot} className="w-full">Save Changes</Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         {/* Active Timetable Display */}
         {activeTimetable ? (
           <motion.div
@@ -479,52 +695,193 @@ const Timetable = () => {
                 <div>
                   <CardTitle className="text-lg">{activeTimetable.name}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {activeTimetable.subjects.length} subjects • {activeTimetable.routine.studyHoursPerDay}h study time
+                    {activeTimetable.subjects.length} subjects • {activeTimetable.routine.studyHoursPerDay}h study time • {activeTimetable.activeDays?.length || 1} days
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => deleteTimetable(activeTimetable.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-lg bg-muted p-1">
+                    <button
+                      onClick={() => setViewMode("day")}
+                      className={`px-3 py-1 text-sm rounded-md transition-all ${
+                        viewMode === "day" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      Day
+                    </button>
+                    <button
+                      onClick={() => setViewMode("week")}
+                      className={`px-3 py-1 text-sm rounded-md transition-all ${
+                        viewMode === "week" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      Week
+                    </button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => deleteTimetable(activeTimetable.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {activeTimetable.generatedSlots.map((slot, index) => (
-                    <motion.div
-                      key={slot.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      className={`flex items-center gap-4 rounded-lg border p-3 ${activityColors[slot.activity]}`}
-                    >
-                      <div className="flex items-center gap-2 w-32 shrink-0">
-                        <span className="text-sm font-mono font-medium">{slot.startTime}</span>
-                        <ChevronRight className="h-3 w-3 opacity-50" />
-                        <span className="text-sm font-mono font-medium">{slot.endTime}</span>
+                {viewMode === "day" ? (
+                  <>
+                    {/* Day Selector */}
+                    <div className="flex items-center justify-between mb-4">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          const activeDays = activeTimetable.activeDays || DAYS_OF_WEEK;
+                          const currentIndex = activeDays.indexOf(selectedDay);
+                          const prevIndex = currentIndex > 0 ? currentIndex - 1 : activeDays.length - 1;
+                          setSelectedDay(activeDays[prevIndex]);
+                        }}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <div className="flex gap-2">
+                        {(activeTimetable.activeDays || DAYS_OF_WEEK).map((day) => (
+                          <button
+                            key={day}
+                            onClick={() => setSelectedDay(day)}
+                            className={`px-3 py-1 text-sm font-medium rounded-lg transition-all ${
+                              selectedDay === day
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {DAY_LABELS[day]}
+                          </button>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {activityIcons[slot.activity]}
-                        {slot.activity === "study" && slot.subject ? (
-                          <div className="flex items-center gap-2">
-                            <div className={`h-2 w-2 rounded-full ${getSubjectColor(slot.subject)}`} />
-                            <span className="font-medium">{slot.subject}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          const activeDays = activeTimetable.activeDays || DAYS_OF_WEEK;
+                          const currentIndex = activeDays.indexOf(selectedDay);
+                          const nextIndex = currentIndex < activeDays.length - 1 ? currentIndex + 1 : 0;
+                          setSelectedDay(activeDays[nextIndex]);
+                        }}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Day View Slots */}
+                    <div className="space-y-2">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={selectedDay}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          className="space-y-2"
+                        >
+                          {getDaySlots(selectedDay).map((slot, index) => (
+                            <motion.div
+                              key={slot.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.03 }}
+                              className={`group flex items-center gap-4 rounded-lg border p-3 ${activityColors[slot.activity]}`}
+                            >
+                              <div className="flex items-center gap-2 w-32 shrink-0">
+                                <span className="text-sm font-mono font-medium">{slot.startTime}</span>
+                                <ChevronRight className="h-3 w-3 opacity-50" />
+                                <span className="text-sm font-mono font-medium">{slot.endTime}</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-1">
+                                {activityIcons[slot.activity]}
+                                {slot.activity === "study" && slot.subject ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className={`h-2 w-2 rounded-full ${getSubjectColor(slot.subject)}`} />
+                                    <span className="font-medium">{slot.subject}</span>
+                                  </div>
+                                ) : (
+                                  <span className="font-medium capitalize">{slot.label || slot.activity}</span>
+                                )}
+                              </div>
+                              <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => openEditSlotDialog(selectedDay, slot)}
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  onClick={() => deleteSlot(selectedDay, slot.id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </motion.div>
+                      </AnimatePresence>
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 mt-4"
+                        onClick={() => addSlot(selectedDay)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Time Slot
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  /* Week View */
+                  <div className="overflow-x-auto">
+                    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${(activeTimetable.activeDays || DAYS_OF_WEEK).length}, minmax(140px, 1fr))` }}>
+                      {(activeTimetable.activeDays || DAYS_OF_WEEK).map((day) => (
+                        <div key={day} className="space-y-2">
+                          <div className="text-center py-2 bg-muted rounded-lg font-semibold text-sm">
+                            {DAY_FULL_LABELS[day]}
                           </div>
-                        ) : (
-                          <span className="font-medium capitalize">{slot.label || slot.activity}</span>
-                        )}
-                      </div>
-                      {slot.activity === "study" && (
-                        <Badge variant="outline" className="ml-auto">
-                          50 min session
-                        </Badge>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
+                          <div className="space-y-1">
+                            {getDaySlots(day).slice(0, 8).map((slot) => (
+                              <div
+                                key={slot.id}
+                                onClick={() => openEditSlotDialog(day, slot)}
+                                className={`p-2 rounded-md text-xs cursor-pointer hover:opacity-80 transition-opacity ${activityColors[slot.activity]}`}
+                              >
+                                <div className="font-mono text-[10px] opacity-70">
+                                  {slot.startTime}-{slot.endTime}
+                                </div>
+                                <div className="font-medium truncate">
+                                  {slot.activity === "study" ? slot.subject : (slot.label || slot.activity)}
+                                </div>
+                              </div>
+                            ))}
+                            {getDaySlots(day).length > 8 && (
+                              <div className="text-center text-xs text-muted-foreground py-1">
+                                +{getDaySlots(day).length - 8} more
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full h-7 text-xs"
+                            onClick={() => addSlot(day)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -534,15 +891,15 @@ const Timetable = () => {
                 <CardContent className="p-4">
                   <div className="text-sm text-muted-foreground">Total Study Time</div>
                   <div className="text-2xl font-bold text-primary">
-                    {activeTimetable.routine.studyHoursPerDay}h
+                    {activeTimetable.routine.studyHoursPerDay}h/day
                   </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-sm text-muted-foreground">Study Sessions</div>
+                  <div className="text-sm text-muted-foreground">Active Days</div>
                   <div className="text-2xl font-bold text-foreground">
-                    {activeTimetable.generatedSlots.filter(s => s.activity === "study").length}
+                    {activeTimetable.activeDays?.length || 1}
                   </div>
                 </CardContent>
               </Card>
@@ -556,9 +913,9 @@ const Timetable = () => {
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-sm text-muted-foreground">Breaks</div>
+                  <div className="text-sm text-muted-foreground">Weekly Hours</div>
                   <div className="text-2xl font-bold text-success">
-                    {activeTimetable.generatedSlots.filter(s => s.activity === "break").length}
+                    {(activeTimetable.routine.studyHoursPerDay * (activeTimetable.activeDays?.length || 1)).toFixed(0)}h
                   </div>
                 </CardContent>
               </Card>
@@ -568,7 +925,7 @@ const Timetable = () => {
           <div className="flex flex-col items-center justify-center rounded-2xl bg-card py-16 shadow-card">
             <Calendar className="mb-4 h-12 w-12 text-muted-foreground/30" />
             <p className="text-muted-foreground">No timetable created yet</p>
-            <p className="text-sm text-muted-foreground/70">Generate a personalized study schedule</p>
+            <p className="text-sm text-muted-foreground/70">Generate a personalized weekly study schedule</p>
           </div>
         )}
       </motion.div>

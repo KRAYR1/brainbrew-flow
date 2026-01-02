@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, FileText, Download, Upload, Trash2, Edit3, Save, X } from "lucide-react";
+import { Plus, Search, FileText, Download, Upload, Trash2, Edit3, Save, X, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +12,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Note } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { jsPDF } from "jspdf";
 
 const Notes = () => {
   const [notes, setNotes] = useLocalStorage<Note[]>("brainbrew-notes", []);
@@ -78,7 +85,65 @@ const Notes = () => {
     }
   };
 
-  const exportNotes = () => {
+  const exportNotesPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const maxWidth = pageWidth - margin * 2;
+    let yPosition = 20;
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("BrainBrew Notes", margin, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Exported on ${new Date().toLocaleDateString()}`, margin, yPosition);
+    yPosition += 15;
+
+    notes.forEach((note, index) => {
+      // Check if we need a new page
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Note title
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${index + 1}. ${note.title}`, margin, yPosition);
+      yPosition += 7;
+
+      // Date
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "italic");
+      doc.text(`Last updated: ${new Date(note.updatedAt).toLocaleString()}`, margin, yPosition);
+      yPosition += 7;
+
+      // Content
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      const splitContent = doc.splitTextToSize(note.content || "No content", maxWidth);
+      
+      splitContent.forEach((line: string) => {
+        if (yPosition > 280) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.text(line, margin, yPosition);
+        yPosition += 6;
+      });
+
+      yPosition += 10; // Space between notes
+    });
+
+    doc.save(`brainbrew-notes-${new Date().toISOString().split("T")[0]}.pdf`);
+    toast({ title: "Notes exported as PDF!" });
+  };
+
+  const exportNotesJSON = () => {
     const dataStr = JSON.stringify(notes, null, 2);
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
     const exportName = `brainbrew-notes-${new Date().toISOString().split("T")[0]}.json`;
@@ -86,7 +151,45 @@ const Notes = () => {
     linkElement.setAttribute("href", dataUri);
     linkElement.setAttribute("download", exportName);
     linkElement.click();
-    toast({ title: "Notes exported successfully!" });
+    toast({ title: "Notes exported as JSON!" });
+  };
+
+  const exportSingleNotePDF = (note: Note) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const maxWidth = pageWidth - margin * 2;
+    let yPosition = 20;
+
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(note.title, margin, yPosition);
+    yPosition += 10;
+
+    // Date
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.text(`Last updated: ${new Date(note.updatedAt).toLocaleString()}`, margin, yPosition);
+    yPosition += 15;
+
+    // Content
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    const splitContent = doc.splitTextToSize(note.content || "No content", maxWidth);
+    
+    splitContent.forEach((line: string) => {
+      if (yPosition > 280) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.text(line, margin, yPosition);
+      yPosition += 7;
+    });
+
+    const safeName = note.title.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+    doc.save(`${safeName}.pdf`);
+    toast({ title: "Note exported as PDF!" });
   };
 
   const importNotes = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,9 +219,23 @@ const Notes = () => {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">Notes</h2>
             <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={exportNotes}>
-                <Download className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={exportNotesPDF}>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportNotesJSON}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="h-4 w-4" />
               </Button>
@@ -243,6 +360,9 @@ const Notes = () => {
                     </>
                   ) : (
                     <>
+                      <Button variant="ghost" size="icon" onClick={() => exportSingleNotePDF(selectedNote)} title="Export as PDF">
+                        <FileDown className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={startEditing}>
                         <Edit3 className="h-4 w-4" />
                       </Button>
