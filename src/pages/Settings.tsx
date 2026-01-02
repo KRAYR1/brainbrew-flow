@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { motion } from "framer-motion";
 import {
@@ -11,6 +11,9 @@ import {
   Plus,
   Trash2,
   Check,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +22,9 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePreferences } from "@/contexts/PreferencesContext";
+import { usePreferences, ThemeType } from "@/contexts/PreferencesContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "next-themes";
 
 const accentColors = [
   { name: "Indigo", value: "indigo", class: "bg-indigo-500" },
@@ -35,6 +39,12 @@ const accentColors = [
   { name: "Cyan", value: "cyan", class: "bg-cyan-500" },
 ];
 
+const themes = [
+  { name: "Light", value: "light" as ThemeType, icon: Sun },
+  { name: "Dark", value: "dark" as ThemeType, icon: Moon },
+  { name: "System", value: "system" as ThemeType, icon: Monitor },
+];
+
 const Settings = () => {
   const {
     preferences,
@@ -47,7 +57,19 @@ const Settings = () => {
     resetToDefaults,
   } = usePreferences();
   const { toast } = useToast();
+  const { setTheme, theme } = useTheme();
   const [newQuote, setNewQuote] = useState({ text: "", author: "" });
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleThemeChange = (newTheme: ThemeType) => {
+    setTheme(newTheme);
+    updateAppearance({ theme: newTheme });
+  };
 
   const handleAddQuote = () => {
     if (!newQuote.text.trim()) {
@@ -192,7 +214,33 @@ const Settings = () => {
               <CardDescription>Personalize how BrainBrew looks</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Theme Selection */}
               <div className="space-y-3">
+                <Label>Theme</Label>
+                <div className="flex gap-3">
+                  {themes.map((themeOption) => {
+                    const Icon = themeOption.icon;
+                    const isActive = mounted && theme === themeOption.value;
+                    return (
+                      <button
+                        key={themeOption.value}
+                        onClick={() => handleThemeChange(themeOption.value)}
+                        className={`flex items-center gap-2 rounded-lg border px-4 py-3 transition-all ${
+                          isActive
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{themeOption.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Accent Color */}
+              <div className="space-y-3 pt-4 border-t">
                 <Label>Accent Color</Label>
                 <div className="flex flex-wrap gap-3">
                   {accentColors.map((color) => (
