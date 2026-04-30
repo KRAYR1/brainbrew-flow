@@ -21,3 +21,24 @@ export interface Subject {
   name: string;
   color: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+}
+
+export interface Flashcard {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface FlashcardDeck {
+  id: string;
+  name: string;
+  cards: Flashcard[];
+  createdAt: string;
+  updatedAt: string;
+}
