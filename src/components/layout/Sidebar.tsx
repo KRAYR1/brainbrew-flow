@@ -1,14 +1,16 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { 
-  LayoutDashboard, 
-  FileText, 
-  BookOpen, 
-  Calendar, 
+import {
+  LayoutDashboard,
+  FileText,
+  BookOpen,
+  Calendar,
   Flame,
   Brain,
   Settings,
-  Clock
+  Clock,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -19,6 +21,8 @@ const navItems = [
   { path: "/assignments", icon: BookOpen, label: "Assignments" },
   { path: "/calendar", icon: Calendar, label: "Calendar" },
   { path: "/timetable", icon: Clock, label: "Study Timetable" },
+  { path: "/chat", icon: Sparkles, label: "AI Chat" },
+  { path: "/flashcards", icon: Layers, label: "Flashcards" },
   { path: "/settings", icon: Settings, label: "Settings" },
 ];
 
