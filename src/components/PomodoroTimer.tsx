@@ -49,7 +49,7 @@ export function PomodoroTimer() {
   }, [mode, timerSettings]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
