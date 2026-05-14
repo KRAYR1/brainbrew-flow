@@ -59,6 +59,7 @@ const Flashcards = () => {
   const [editA, setEditA] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
   const { toast } = useToast();
 
   const selected = useMemo(
