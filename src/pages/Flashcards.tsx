@@ -313,7 +313,7 @@ const Flashcards = () => {
                 <div>
                   <h1 className="text-2xl font-bold">{selected.name}</h1>
                   <p className="text-sm text-muted-foreground">
-                    {selected.cards.length} cards
+                    {selected.cards.length} cards · {selected.cards.filter((c) => isDue(c)).length} due now
                   </p>
                 </div>
                 <Button
