@@ -180,11 +180,14 @@ const Flashcards = () => {
     }
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileObject = async (file: File) => {
     if (!selected) {
       toast({ title: "Select or create a deck first", variant: "destructive" });
+      return;
+    }
+    const okExt = /\.(pdf|docx|txt|md)$/i.test(file.name);
+    if (!okExt) {
+      toast({ title: "Unsupported file", description: "Use PDF, DOCX, TXT or MD", variant: "destructive" });
       return;
     }
     setGenerating(true);
@@ -201,9 +204,20 @@ const Flashcards = () => {
       console.error(err);
       toast({ title: "File parsing failed", variant: "destructive" });
       setGenerating(false);
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (file) await handleFileObject(file);
+  };
+
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) await handleFileObject(file);
   };
 
   return (
