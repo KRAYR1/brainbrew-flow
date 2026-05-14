@@ -36,6 +36,7 @@ import {
 import { extractFileText } from "@/lib/fileExtract";
 import { supabase } from "@/integrations/supabase/client";
 import { FlashcardStudy } from "@/components/flashcards/FlashcardStudy";
+import { initCard, isDue } from "@/lib/srs";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Flashcards = () => {
