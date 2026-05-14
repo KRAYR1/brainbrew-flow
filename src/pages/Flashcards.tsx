@@ -521,7 +521,14 @@ const Flashcards = () => {
           <DialogHeader>
             <DialogTitle>Studying: {selected?.name}</DialogTitle>
           </DialogHeader>
-          {selected && <FlashcardStudy cards={selected.cards} />}
+          {selected && (
+            <FlashcardStudy
+              cards={selected.cards}
+              onUpdate={(updated) =>
+                updateDeck(selected.id, (d) => ({ ...d, cards: updated }))
+              }
+            />
+          )}
         </DialogContent>
       </Dialog>
     </Layout>
