@@ -33,6 +33,12 @@ export interface Flashcard {
   id: string;
   question: string;
   answer: string;
+  // Anki SM-2 spaced repetition state
+  ease?: number;        // ease factor, default 2.5
+  interval?: number;    // days until next review, default 0
+  repetitions?: number; // successful reviews in a row, default 0
+  dueAt?: string;       // ISO date when card is next due
+  lapses?: number;      // times the card was forgotten
 }
 
 export interface FlashcardDeck {
