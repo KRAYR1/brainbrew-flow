@@ -105,11 +105,11 @@ const Flashcards = () => {
       toast({ title: "Question and answer are required", variant: "destructive" });
       return;
     }
-    const card: Flashcard = {
+    const card: Flashcard = initCard({
       id: Date.now().toString(),
       question: manualQ.trim(),
       answer: manualA.trim(),
-    };
+    }) as Flashcard;
     updateDeck(selected.id, (d) => ({ ...d, cards: [...d.cards, card] }));
     setManualQ("");
     setManualA("");
