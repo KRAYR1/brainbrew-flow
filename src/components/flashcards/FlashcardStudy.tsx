@@ -1,78 +1,78 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Flashcard } from "@/types";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shuffle, RotateCcw, Check, X } from "lucide-react";
+import { RotateCcw, Eye } from "lucide-react";
+import { applyRating, isDue, nextIntervalLabel, Rating } from "@/lib/srs";
 
 interface Props {
   cards: Flashcard[];
+  onUpdate?: (updated: Flashcard[]) => void;
 }
 
-function shuffleArray<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+export function FlashcardStudy({ cards, onUpdate }: Props) {
+  // Working copy of cards we mutate as ratings are applied
+  const [working, setWorking] = useState<Flashcard[]>(cards);
+  // Queue of indices into `working` that are due in this session
+  const [queue, setQueue] = useState<number[]>(() =>
+    cards.map((c, i) => (isDue(c) ? i : -1)).filter((i) => i >= 0),
+  );
+  const [revealed, setRevealed] = useState(false);
+  const [reviewed, setReviewed] = useState(0);
 
-export function FlashcardStudy({ cards }: Props) {
-  const [order, setOrder] = useState<Flashcard[]>(() => cards);
-  const [index, setIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-  const [gotIt, setGotIt] = useState(0);
+  useEffect(() => {
+    setWorking(cards);
+    setQueue(cards.map((c, i) => (isDue(c) ? i : -1)).filter((i) => i >= 0));
+    setRevealed(false);
+    setReviewed(0);
+  }, [cards]);
 
-  const current = order[index];
-  const total = order.length;
-  const finished = index >= total;
+  const currentIdx = queue[0];
+  const current = currentIdx != null ? working[currentIdx] : null;
+  const finished = !current;
 
-  const reset = () => {
-    setOrder(cards);
-    setIndex(0);
-    setFlipped(false);
-    setGotIt(0);
+  const dueCount = queue.length;
+  const totalDue = useMemo(
+    () => working.filter((c) => isDue(c)).length,
+    [working],
+  );
+
+  const rate = (rating: Rating) => {
+    if (currentIdx == null || !current) return;
+    const updatedCard = applyRating(current, rating);
+    const newWorking = working.map((c, i) => (i === currentIdx ? updatedCard : c));
+    setWorking(newWorking);
+    onUpdate?.(newWorking);
+
+    // Re-queue if "Again" (review later in same session)
+    const rest = queue.slice(1);
+    const nextQueue = rating === 0 ? [...rest, currentIdx] : rest;
+    setQueue(nextQueue);
+    setRevealed(false);
+    setReviewed((n) => n + 1);
   };
 
-  const shuffle = () => {
-    setOrder(shuffleArray(cards));
-    setIndex(0);
-    setFlipped(false);
-    setGotIt(0);
+  const restart = () => {
+    setQueue(working.map((c, i) => (isDue(c) ? i : -1)).filter((i) => i >= 0));
+    setRevealed(false);
+    setReviewed(0);
   };
 
-  const next = (correct: boolean) => {
-    if (correct) setGotIt((g) => g + 1);
-    setFlipped(false);
-    setIndex((i) => i + 1);
-  };
-
-  const progress = useMemo(() => {
-    if (total === 0) return 0;
-    return Math.round((index / total) * 100);
-  }, [index, total]);
-
-  if (total === 0) {
-    return <p className="py-8 text-center text-muted-foreground">No cards to study.</p>;
+  if (working.length === 0) {
+    return <p className="py-8 text-center text-muted-foreground">No cards in this deck.</p>;
   }
 
   if (finished) {
     return (
       <div className="space-y-4 py-6 text-center">
-        <h3 className="text-xl font-bold">Done!</h3>
+        <h3 className="text-xl font-bold">All caught up</h3>
         <p className="text-muted-foreground">
-          You got {gotIt} of {total} correct.
+          You reviewed {reviewed} card{reviewed === 1 ? "" : "s"}. No more cards due right now.
         </p>
-        <div className="flex justify-center gap-2">
-          <Button onClick={reset} variant="outline">
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Restart
-          </Button>
-          <Button onClick={shuffle}>
-            <Shuffle className="mr-2 h-4 w-4" />
-            Shuffle & restart
-          </Button>
-        </div>
+        <Button onClick={restart} variant="outline">
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Review again
+        </Button>
       </div>
     );
   }
@@ -80,65 +80,81 @@ export function FlashcardStudy({ cards }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          Card {index + 1} of {total}
-        </span>
-        <span>{progress}%</span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full bg-primary transition-all"
-          style={{ width: `${progress}%` }}
-        />
+        <span>Due: {dueCount}</span>
+        <span>Reviewed: {reviewed}</span>
       </div>
 
       <div
-        className="relative h-64 cursor-pointer select-none"
-        onClick={() => setFlipped((f) => !f)}
-        style={{ perspective: 1000 }}
+        className="relative min-h-[16rem] cursor-pointer select-none"
+        onClick={() => !revealed && setRevealed(true)}
       >
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${current.id}-${flipped ? "a" : "q"}`}
-            initial={{ rotateY: flipped ? -90 : 90, opacity: 0 }}
-            animate={{ rotateY: 0, opacity: 1 }}
-            exit={{ rotateY: flipped ? 90 : -90, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className={`absolute inset-0 flex items-center justify-center rounded-2xl p-6 text-center shadow-card ${
-              flipped ? "bg-accent/10" : "bg-primary/5"
-            }`}
+            key={`${current.id}-${revealed ? "a" : "q"}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="rounded-2xl bg-primary/5 p-6 text-center shadow-card"
           >
-            <div>
-              <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
-                {flipped ? "Answer" : "Question"}
-              </p>
-              <p className="text-lg font-medium text-foreground">
-                {flipped ? current.answer : current.question}
-              </p>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Click card to flip
-              </p>
-            </div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
+              Question
+            </p>
+            <p className="text-lg font-medium text-foreground whitespace-pre-wrap">
+              {current.question}
+            </p>
+
+            {revealed && (
+              <>
+                <div className="my-4 border-t border-border" />
+                <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  Answer
+                </p>
+                <p className="text-base text-foreground whitespace-pre-wrap">
+                  {current.answer}
+                </p>
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      <div className="flex justify-between gap-2">
-        <Button variant="outline" onClick={shuffle} size="sm">
-          <Shuffle className="mr-2 h-4 w-4" />
-          Shuffle
+      {!revealed ? (
+        <Button className="w-full" onClick={() => setRevealed(true)}>
+          <Eye className="mr-2 h-4 w-4" />
+          Show answer
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => next(false)}>
-            <X className="mr-2 h-4 w-4 text-destructive" />
-            Review again
-          </Button>
-          <Button onClick={() => next(true)}>
-            <Check className="mr-2 h-4 w-4" />
-            Got it
-          </Button>
+      ) : (
+        <div className="grid grid-cols-4 gap-2">
+          <RatingButton label="Again" hint={nextIntervalLabel(current, 0)} onClick={() => rate(0)} variant="destructive" />
+          <RatingButton label="Hard" hint={nextIntervalLabel(current, 1)} onClick={() => rate(1)} variant="outline" />
+          <RatingButton label="Good" hint={nextIntervalLabel(current, 2)} onClick={() => rate(2)} variant="secondary" />
+          <RatingButton label="Easy" hint={nextIntervalLabel(current, 3)} onClick={() => rate(3)} />
         </div>
-      </div>
+      )}
+
+      <p className="text-center text-xs text-muted-foreground">
+        {totalDue} card{totalDue === 1 ? "" : "s"} due in this deck
+      </p>
     </div>
+  );
+}
+
+function RatingButton({
+  label,
+  hint,
+  onClick,
+  variant = "default",
+}: {
+  label: string;
+  hint: string;
+  onClick: () => void;
+  variant?: "default" | "destructive" | "outline" | "secondary";
+}) {
+  return (
+    <Button onClick={onClick} variant={variant} className="flex h-auto flex-col py-2">
+      <span className="text-sm font-semibold">{label}</span>
+      <span className="text-[10px] opacity-80">{hint}</span>
+    </Button>
   );
 }
