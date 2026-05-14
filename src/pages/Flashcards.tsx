@@ -36,6 +36,7 @@ import {
 import { extractFileText } from "@/lib/fileExtract";
 import { supabase } from "@/integrations/supabase/client";
 import { FlashcardStudy } from "@/components/flashcards/FlashcardStudy";
+import { initCard, isDue } from "@/lib/srs";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Flashcards = () => {
@@ -58,6 +59,7 @@ const Flashcards = () => {
   const [editA, setEditA] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
   const { toast } = useToast();
 
   const selected = useMemo(
@@ -103,11 +105,11 @@ const Flashcards = () => {
       toast({ title: "Question and answer are required", variant: "destructive" });
       return;
     }
-    const card: Flashcard = {
+    const card: Flashcard = initCard({
       id: Date.now().toString(),
       question: manualQ.trim(),
       answer: manualA.trim(),
-    };
+    }) as Flashcard;
     updateDeck(selected.id, (d) => ({ ...d, cards: [...d.cards, card] }));
     setManualQ("");
     setManualA("");
@@ -160,11 +162,13 @@ const Flashcards = () => {
         toast({ title: "No cards generated", variant: "destructive" });
         return;
       }
-      const newCards: Flashcard[] = cards.map((c, i) => ({
-        id: `${Date.now()}-${i}`,
-        question: c.question,
-        answer: c.answer,
-      }));
+      const newCards: Flashcard[] = cards.map((c, i) =>
+        initCard({
+          id: `${Date.now()}-${i}`,
+          question: c.question,
+          answer: c.answer,
+        }) as Flashcard,
+      );
       updateDeck(selected.id, (d) => ({ ...d, cards: [...d.cards, ...newCards] }));
       toast({ title: `Added ${newCards.length} cards` });
       setPasteText("");
@@ -176,11 +180,14 @@ const Flashcards = () => {
     }
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileObject = async (file: File) => {
     if (!selected) {
       toast({ title: "Select or create a deck first", variant: "destructive" });
+      return;
+    }
+    const okExt = /\.(pdf|docx|txt|md)$/i.test(file.name);
+    if (!okExt) {
+      toast({ title: "Unsupported file", description: "Use PDF, DOCX, TXT or MD", variant: "destructive" });
       return;
     }
     setGenerating(true);
@@ -197,9 +204,20 @@ const Flashcards = () => {
       console.error(err);
       toast({ title: "File parsing failed", variant: "destructive" });
       setGenerating(false);
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (file) await handleFileObject(file);
+  };
+
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) await handleFileObject(file);
   };
 
   return (
@@ -295,7 +313,7 @@ const Flashcards = () => {
                 <div>
                   <h1 className="text-2xl font-bold">{selected.name}</h1>
                   <p className="text-sm text-muted-foreground">
-                    {selected.cards.length} cards
+                    {selected.cards.length} cards · {selected.cards.filter((c) => isDue(c)).length} due now
                   </p>
                 </div>
                 <Button
@@ -359,10 +377,23 @@ const Flashcards = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={onDrop}
+                    className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+                      dragOver ? "border-primary bg-primary/5" : "border-border"
+                    }`}
+                  >
                     <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      Upload a PDF, DOCX, TXT or MD file
+                    <p className="mb-1 text-sm font-medium">
+                      Drop a file here, or click to browse
+                    </p>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      PDF, DOCX, TXT or MD — cards are generated strictly from the file's content
                     </p>
                     <input
                       ref={fileInputRef}
@@ -490,7 +521,14 @@ const Flashcards = () => {
           <DialogHeader>
             <DialogTitle>Studying: {selected?.name}</DialogTitle>
           </DialogHeader>
-          {selected && <FlashcardStudy cards={selected.cards} />}
+          {selected && (
+            <FlashcardStudy
+              cards={selected.cards}
+              onUpdate={(updated) =>
+                updateDeck(selected.id, (d) => ({ ...d, cards: updated }))
+              }
+            />
+          )}
         </DialogContent>
       </Dialog>
     </Layout>
