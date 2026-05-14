@@ -377,10 +377,23 @@ const Flashcards = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={onDrop}
+                    className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+                      dragOver ? "border-primary bg-primary/5" : "border-border"
+                    }`}
+                  >
                     <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      Upload a PDF, DOCX, TXT or MD file
+                    <p className="mb-1 text-sm font-medium">
+                      Drop a file here, or click to browse
+                    </p>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      PDF, DOCX, TXT or MD — cards are generated strictly from the file's content
                     </p>
                     <input
                       ref={fileInputRef}
