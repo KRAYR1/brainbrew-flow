@@ -162,11 +162,13 @@ const Flashcards = () => {
         toast({ title: "No cards generated", variant: "destructive" });
         return;
       }
-      const newCards: Flashcard[] = cards.map((c, i) => ({
-        id: `${Date.now()}-${i}`,
-        question: c.question,
-        answer: c.answer,
-      }));
+      const newCards: Flashcard[] = cards.map((c, i) =>
+        initCard({
+          id: `${Date.now()}-${i}`,
+          question: c.question,
+          answer: c.answer,
+        }) as Flashcard,
+      );
       updateDeck(selected.id, (d) => ({ ...d, cards: [...d.cards, ...newCards] }));
       toast({ title: `Added ${newCards.length} cards` });
       setPasteText("");
