@@ -23,10 +23,17 @@ Deno.serve(async (req) => {
     // Truncate very long inputs to keep token usage reasonable
     const trimmed = text.slice(0, 18000);
 
-    const systemPrompt = `You generate high-quality study flashcards from study material.
-Difficulty: ${difficulty}.
-Each card has a clear, concise question and an accurate, self-contained answer.
-Avoid duplicates. Cover the most important concepts.`;
+    const systemPrompt = `You are a flashcard generator. You MUST create study flashcards using ONLY the facts, definitions, names, dates, formulas, and concepts that appear in the SOURCE MATERIAL the user provides.
+
+Strict rules:
+- Do NOT use outside knowledge. If a fact is not in the source, do not include it.
+- Each question must be directly answerable from the source.
+- Each answer must be supported by the source (paraphrase is fine; do not invent details).
+- Prefer atomic cards: one concept per card. Avoid duplicates.
+- If the source is too short or off-topic, return as many high-quality cards as you can (even if fewer than requested) rather than fabricating.
+- Cover the most important, testable points: definitions, key terms, cause/effect, examples, formulas, dates, names.
+- Difficulty "${difficulty}": easy = recall/definitions, medium = explain/compare, hard = apply/analyze.
+- Keep questions under ~25 words and answers under ~50 words. Student-friendly language.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -40,7 +47,7 @@ Avoid duplicates. Cover the most important concepts.`;
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Generate exactly ${safeCount} flashcards from the following material:\n\n${trimmed}`,
+            content: `Generate up to ${safeCount} flashcards STRICTLY from the SOURCE MATERIAL below. Do not use any information that is not in this text.\n\n=== SOURCE MATERIAL START ===\n${trimmed}\n=== SOURCE MATERIAL END ===`,
           },
         ],
         tools: [
