@@ -100,7 +100,7 @@ const Settings = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-            <p className="text-muted-foreground">Customize your BrainBrew experience</p>
+            <p className="text-muted-foreground">Customize your BrainBrews experience</p>
           </div>
           <Button variant="outline" onClick={handleReset} className="gap-2">
             <RotateCcw className="h-4 w-4" />
@@ -211,7 +211,7 @@ const Settings = () => {
                 <Palette className="h-5 w-5 text-primary" />
                 Appearance
               </CardTitle>
-              <CardDescription>Personalize how BrainBrew looks</CardDescription>
+              <CardDescription>Personalize how BrainBrews looks</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Theme Selection */}

@@ -39,7 +39,7 @@ export function Sidebar() {
             <Brain className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold text-sidebar-foreground">
-            Brain<span className="text-primary">Brew</span>
+            Brain<span className="text-primary">Brews</span>
           </span>
         </div>
 
