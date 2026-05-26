@@ -4,7 +4,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are BrainBrew Tutor — a friendly, encouraging study assistant for students.
+const SYSTEM_PROMPT = `You are BrainBrews Tutor — a friendly, encouraging study assistant for students.
 - Explain concepts clearly with simple examples.
 - Use markdown: short paragraphs, bullet lists, **bold** for key terms, and code blocks when relevant.
 - When asked, generate practice questions or quick quizzes.

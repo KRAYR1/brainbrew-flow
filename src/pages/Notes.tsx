@@ -95,7 +95,7 @@ const Notes = () => {
     // Title
     doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
-    doc.text("BrainBrew Notes", margin, yPosition);
+    doc.text("BrainBrews Notes", margin, yPosition);
     yPosition += 10;
     
     doc.setFontSize(10);
