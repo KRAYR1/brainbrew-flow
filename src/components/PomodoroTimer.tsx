@@ -48,6 +48,24 @@ export function PomodoroTimer() {
     setTimeLeft(timerSettings[mode] * 60);
   }, [mode, timerSettings]);
 
+  // Listen for Jarvis commands
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      if (detail.action === "start") {
+        const nextMode = (detail.mode as TimerMode) || "work";
+        setMode(nextMode);
+        if (detail.minutes) setTimeLeft(detail.minutes * 60);
+        setTimeout(() => setIsRunning(true), 50);
+      } else if (detail.action === "stop") {
+        setIsRunning(false);
+      }
+    };
+    window.addEventListener("jarvis:pomodoro", handler);
+    return () => window.removeEventListener("jarvis:pomodoro", handler);
+  }, []);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
 

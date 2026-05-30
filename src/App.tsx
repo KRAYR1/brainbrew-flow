@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
+import { AssistantProvider } from "@/contexts/AssistantContext";
+import { JarvisAssistant } from "@/components/JarvisAssistant";
 import Index from "./pages/Index";
 import Notes from "./pages/Notes";
 import Assignments from "./pages/Assignments";
@@ -25,18 +27,21 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/notes" element={<Notes />} />
-              <Route path="/assignments" element={<Assignments />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/timetable" element={<Timetable />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/flashcards" element={<Flashcards />} />
-              <Route path="/settings" element={<Settings />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AssistantProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/notes" element={<Notes />} />
+                <Route path="/assignments" element={<Assignments />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/timetable" element={<Timetable />} />
+                <Route path="/chat" element={<Chat />} />
+                <Route path="/flashcards" element={<Flashcards />} />
+                <Route path="/settings" element={<Settings />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <JarvisAssistant />
+            </AssistantProvider>
           </BrowserRouter>
         </TooltipProvider>
       </PreferencesProvider>
