@@ -12,9 +12,10 @@ const JARVIS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/jarvis-ass
 type Msg = { role: "user" | "assistant"; content: string; actions?: string[] };
 
 const SUGGESTIONS = [
+  "Explain the French Revolution in simple terms",
   "Start a 45 minute focus session",
-  "Make a note titled 'Physics – Newton's Laws' with a quick summary",
-  "Create 5 flashcards on the French Revolution",
+  "Quiz me on photosynthesis",
+  "Create 5 flashcards on World War II",
   "Add an assignment: Math homework due Friday",
   "Switch to dark mode",
 ];
