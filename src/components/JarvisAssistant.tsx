@@ -12,9 +12,10 @@ const JARVIS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/jarvis-ass
 type Msg = { role: "user" | "assistant"; content: string; actions?: string[] };
 
 const SUGGESTIONS = [
+  "Explain the French Revolution in simple terms",
   "Start a 45 minute focus session",
-  "Make a note titled 'Physics – Newton's Laws' with a quick summary",
-  "Create 5 flashcards on the French Revolution",
+  "Quiz me on photosynthesis",
+  "Create 5 flashcards on World War II",
   "Add an assignment: Math homework due Friday",
   "Switch to dark mode",
 ];
@@ -94,7 +95,7 @@ export function JarvisAssistant() {
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         toast({
-          title: resp.status === 402 ? "AI credits exhausted" : "Jarvis error",
+          title: resp.status === 402 ? "AI credits exhausted" : "Brainy B error",
           description: err.error || "Try again.",
           variant: "destructive",
         });
@@ -133,7 +134,7 @@ export function JarvisAssistant() {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/30"
-        aria-label="Open Jarvis"
+        aria-label="Open Brainy B"
       >
         <Sparkles className="h-6 w-6" />
         <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -166,8 +167,8 @@ export function JarvisAssistant() {
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">Jarvis</h2>
-                    <p className="text-xs text-muted-foreground">Your study co-pilot · ⌘J</p>
+                    <h2 className="text-sm font-semibold text-foreground">Brainy B</h2>
+                    <p className="text-xs text-muted-foreground">Tutor + doer · ⌘J</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
@@ -180,7 +181,7 @@ export function JarvisAssistant() {
                 {messages.length === 0 && (
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Hello. I can act across the app — notes, assignments, focus sessions, flashcards, settings. Just ask.
+                      Hey, I'm Brainy B. I can tutor you on any topic *and* take action across the app — notes, assignments, focus sessions, flashcards. Just ask.
                     </p>
                     <div className="space-y-2">
                       {SUGGESTIONS.map((s) => (
@@ -248,7 +249,7 @@ export function JarvisAssistant() {
                         send();
                       }
                     }}
-                    placeholder="Ask Jarvis to do anything…"
+                    placeholder="Ask Brainy B anything…"
                     rows={1}
                     className="min-h-[40px] resize-none"
                   />

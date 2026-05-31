@@ -8,14 +8,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Send, Trash2, Sparkles, Bot, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { motion } from "framer-motion";
+import { useAssistant } from "@/contexts/AssistantContext";
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-chat`;
+const BRAINY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/jarvis-assistant`;
 
 const Chat = () => {
   const [messages, setMessages] = useLocalStorage<ChatMessage[]>("brainbrew-chat-history", []);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { executeAction } = useAssistant();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,29 +39,8 @@ const Chat = () => {
     setInput("");
     setLoading(true);
 
-    let assistantText = "";
-    const assistantId = (Date.now() + 1).toString();
-    const upsert = (chunk: string) => {
-      assistantText += chunk;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.id === assistantId) {
-          return prev.map((m) => (m.id === assistantId ? { ...m, content: assistantText } : m));
-        }
-        return [
-          ...prev,
-          {
-            id: assistantId,
-            role: "assistant",
-            content: assistantText,
-            createdAt: new Date().toISOString(),
-          },
-        ];
-      });
-    };
-
     try {
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetch(BRAINY_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,51 +48,46 @@ const Chat = () => {
         },
         body: JSON.stringify({
           messages: next.map((m) => ({ role: m.role, content: m.content })),
+          context: { path: window.location.pathname },
         }),
       });
 
-      if (!resp.ok || !resp.body) {
+      if (!resp.ok) {
         if (resp.status === 429) {
           toast({ title: "Rate limit hit", description: "Please wait a moment.", variant: "destructive" });
         } else if (resp.status === 402) {
           toast({ title: "AI credits exhausted", description: "Add credits to continue.", variant: "destructive" });
         } else {
-          toast({ title: "Chat error", description: "Could not reach the assistant.", variant: "destructive" });
+          toast({ title: "Chat error", description: "Could not reach Brainy B.", variant: "destructive" });
         }
         setLoading(false);
         return;
       }
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let done = false;
-      while (!done) {
-        const { done: d, value } = await reader.read();
-        if (d) break;
-        buf += decoder.decode(value, { stream: true });
-        let idx: number;
-        while ((idx = buf.indexOf("\n")) !== -1) {
-          let line = buf.slice(0, idx);
-          buf = buf.slice(idx + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line || line.startsWith(":")) continue;
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6).trim();
-          if (json === "[DONE]") {
-            done = true;
-            break;
-          }
-          try {
-            const parsed = JSON.parse(json);
-            const c = parsed.choices?.[0]?.delta?.content;
-            if (c) upsert(c);
-          } catch {
-            buf = line + "\n" + buf;
-            break;
-          }
-        }
+      const data = await resp.json();
+      const actionResults: string[] = [];
+      for (const tc of data.toolCalls || []) {
+        const r = await executeAction(tc);
+        actionResults.push(r);
       }
+
+      const content =
+        (data.message || "").trim() ||
+        (actionResults.length ? actionResults.join("\n") : "…");
+      const suffix =
+        actionResults.length && data.message
+          ? "\n\n" + actionResults.map((a) => `✓ ${a}`).join("\n")
+          : "";
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: content + suffix,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
     } catch (e) {
       console.error(e);
       toast({ title: "Network error", variant: "destructive" });
@@ -132,10 +108,10 @@ const Chat = () => {
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
               <Sparkles className="h-6 w-6 text-primary" />
-              AI Study Chat
+              Brainy B
             </h1>
             <p className="text-sm text-muted-foreground">
-              Ask anything — explanations, summaries, quick quizzes.
+              Your tutor and assistant in one — ask anything or tell me to do something.
             </p>
           </div>
           {messages.length > 0 && (
@@ -153,8 +129,10 @@ const Chat = () => {
           {messages.length === 0 && !loading && (
             <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
               <Bot className="mb-3 h-12 w-12 opacity-40" />
-              <p className="text-sm">Start a conversation with your study tutor.</p>
-              <p className="mt-1 text-xs">Try: "Explain photosynthesis with an analogy."</p>
+              <p className="text-sm">Say hi to Brainy B.</p>
+              <p className="mt-1 text-xs">
+                Try: "Explain photosynthesis" or "Start a 30 minute focus session."
+              </p>
             </div>
           )}
           <div className="space-y-4">
@@ -192,7 +170,7 @@ const Chat = () => {
                 )}
               </motion.div>
             ))}
-            {loading && messages[messages.length - 1]?.role === "user" && (
+            {loading && (
               <div className="flex gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Bot className="h-4 w-4" />
@@ -207,7 +185,7 @@ const Chat = () => {
 
         <div className="flex gap-2 rounded-2xl bg-card p-3 shadow-card">
           <Textarea
-            placeholder="Ask your study question…"
+            placeholder="Ask Brainy B anything…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

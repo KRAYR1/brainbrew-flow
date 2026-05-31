@@ -21,7 +21,7 @@ const navItems = [
   { path: "/assignments", icon: BookOpen, label: "Assignments" },
   { path: "/calendar", icon: Calendar, label: "Calendar" },
   { path: "/timetable", icon: Clock, label: "Study Timetable" },
-  { path: "/chat", icon: Sparkles, label: "AI Chat" },
+  { path: "/chat", icon: Sparkles, label: "Brainy B" },
   { path: "/flashcards", icon: Layers, label: "Flashcards" },
   { path: "/settings", icon: Settings, label: "Settings" },
 ];
