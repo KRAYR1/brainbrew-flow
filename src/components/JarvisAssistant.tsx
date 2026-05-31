@@ -181,7 +181,7 @@ export function JarvisAssistant() {
                 {messages.length === 0 && (
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Hello. I can act across the app — notes, assignments, focus sessions, flashcards, settings. Just ask.
+                      Hey, I'm Brainy B. I can tutor you on any topic *and* take action across the app — notes, assignments, focus sessions, flashcards. Just ask.
                     </p>
                     <div className="space-y-2">
                       {SUGGESTIONS.map((s) => (
