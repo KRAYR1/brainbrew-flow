@@ -1,51 +1,20 @@
-import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, X, Loader2, Mic, MicOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useAssistant } from "@/contexts/AssistantContext";
-import { useToast } from "@/hooks/use-toast";
-import ReactMarkdown from "react-markdown";
-
-const JARVIS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/jarvis-assistant`;
-
-type Msg = { role: "user" | "assistant"; content: string; actions?: string[] };
-
-const SUGGESTIONS = [
-  "Explain the French Revolution in simple terms",
-  "Start a 45 minute focus session",
-  "Quiz me on photosynthesis",
-  "Create 5 flashcards on World War II",
-  "Add an assignment: Math homework due Friday",
-  "Switch to dark mode",
-];
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function JarvisAssistant() {
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [listening, setListening] = useState(false);
-  const { executeAction } = useAssistant();
-  const { toast } = useToast();
-  const recogRef = useRef<any>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, loading]);
-
-  // Keyboard shortcut: Cmd/Ctrl + J
+  // Keyboard shortcut: Cmd/Ctrl + J opens Brainy B chat page
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
-        setOpen((o) => !o);
+        navigate("/chat");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [navigate]);
 
   const toggleVoice = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
