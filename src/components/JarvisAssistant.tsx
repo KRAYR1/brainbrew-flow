@@ -249,7 +249,7 @@ export function JarvisAssistant() {
                         send();
                       }
                     }}
-                    placeholder="Ask Jarvis to do anything…"
+                    placeholder="Ask Brainy B anything…"
                     rows={1}
                     className="min-h-[40px] resize-none"
                   />
