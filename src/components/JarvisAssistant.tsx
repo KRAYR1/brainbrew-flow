@@ -95,7 +95,7 @@ export function JarvisAssistant() {
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         toast({
-          title: resp.status === 402 ? "AI credits exhausted" : "Jarvis error",
+          title: resp.status === 402 ? "AI credits exhausted" : "Brainy B error",
           description: err.error || "Try again.",
           variant: "destructive",
         });
