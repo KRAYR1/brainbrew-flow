@@ -167,8 +167,8 @@ export function JarvisAssistant() {
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">Jarvis</h2>
-                    <p className="text-xs text-muted-foreground">Your study co-pilot · ⌘J</p>
+                    <h2 className="text-sm font-semibold text-foreground">Brainy B</h2>
+                    <p className="text-xs text-muted-foreground">Tutor + doer · ⌘J</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
