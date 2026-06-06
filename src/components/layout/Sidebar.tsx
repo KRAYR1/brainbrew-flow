@@ -1,5 +1,6 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -11,9 +12,11 @@ import {
   Clock,
   Sparkles,
   Layers,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/contexts/PreferencesContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -28,7 +31,18 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { preferences } = usePreferences();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth", { replace: true });
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-sidebar-border bg-sidebar">
@@ -74,7 +88,7 @@ export function Sidebar() {
         </nav>
 
         {/* Streak indicator */}
-        <div className="mx-3 mb-6 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 p-4">
+        <div className="mx-3 mb-3 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 p-4">
           <div className="flex items-center gap-2 text-accent">
             <Flame className="h-5 w-5" />
             <span className="text-sm font-semibold">Current Streak</span>
@@ -85,6 +99,18 @@ export function Sidebar() {
           <p className="text-xs text-muted-foreground">
             Goal: {preferences.streakSettings.dailyGoal} pomodoros/day
           </p>
+        </div>
+
+        {/* User / Sign out */}
+        <div className="mx-3 mb-4 flex items-center justify-between gap-2 rounded-lg border border-sidebar-border px-3 py-2">
+          <span className="truncate text-xs text-sidebar-foreground/70">{email ?? "Signed in"}</span>
+          <button
+            onClick={handleSignOut}
+            className="rounded p-1.5 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </aside>
