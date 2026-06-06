@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { AssistantProvider } from "@/contexts/AssistantContext";
 import { JarvisAssistant } from "@/components/JarvisAssistant";
+import { FocusGuardOverlay } from "@/components/FocusGuardOverlay";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Notes from "./pages/Notes";
@@ -44,6 +45,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <JarvisAssistant />
+              <FocusGuardOverlay />
             </AssistantProvider>
           </BrowserRouter>
         </TooltipProvider>
