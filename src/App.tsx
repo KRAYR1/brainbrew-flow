@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { AssistantProvider } from "@/contexts/AssistantContext";
 import { JarvisAssistant } from "@/components/JarvisAssistant";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Notes from "./pages/Notes";
 import Assignments from "./pages/Assignments";
@@ -15,6 +16,7 @@ import Timetable from "./pages/Timetable";
 import Settings from "./pages/Settings";
 import Chat from "./pages/Chat";
 import Flashcards from "./pages/Flashcards";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,14 +31,15 @@ const App = () => (
           <BrowserRouter>
             <AssistantProvider>
               <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/notes" element={<Notes />} />
-                <Route path="/assignments" element={<Assignments />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/timetable" element={<Timetable />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/flashcards" element={<Flashcards />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+                <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+                <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
+                <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
