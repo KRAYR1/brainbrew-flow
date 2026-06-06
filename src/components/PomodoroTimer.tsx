@@ -66,6 +66,13 @@ export function PomodoroTimer() {
     return () => window.removeEventListener("jarvis:pomodoro", handler);
   }, []);
 
+  // Broadcast running state so FocusGuard / other modules can react in real time
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("pomodoro:state", { detail: { isRunning, mode } })
+    );
+  }, [isRunning, mode]);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
 
