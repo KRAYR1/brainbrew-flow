@@ -20,7 +20,6 @@ export interface UserPreferences {
   appearance: {
     theme: ThemeType;
     accentColor: string;
-    showMotivationalQuotes: boolean;
     compactMode: boolean;
   };
   // Streak settings
@@ -30,8 +29,6 @@ export interface UserPreferences {
     longestStreak: number;
     lastActiveDate: string;
   };
-  // Custom quotes
-  customQuotes: Array<{ text: string; author: string }>;
   // Dashboard widgets
   dashboardWidgets: {
     showTimer: boolean;
