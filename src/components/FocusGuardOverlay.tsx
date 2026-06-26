@@ -173,6 +173,53 @@ export function FocusGuardOverlay() {
             Your Pomodoro is still running. Come back to BrainBrew and finish
             strong — the cat is watching. 🐾
           </p>
+          {blocker.sites.length > 0 && (
+            <div
+              style={{
+                marginTop: 14,
+                maxWidth: 420,
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 12,
+                padding: "10px 14px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  textTransform: "uppercase",
+                  letterSpacing: 1.2,
+                  color: "#ff80a0",
+                  fontWeight: 700,
+                  marginBottom: 6,
+                }}
+              >
+                Blocked until timer ends
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+                {blocker.sites.slice(0, 12).map((s) => (
+                  <span
+                    key={s.url}
+                    style={{
+                      fontSize: "0.72rem",
+                      padding: "3px 9px",
+                      borderRadius: 999,
+                      background: "rgba(255,90,120,0.18)",
+                      color: "#ffd0dc",
+                      border: "1px solid rgba(255,120,150,0.35)",
+                    }}
+                  >
+                    {s.label}
+                  </span>
+                ))}
+                {blocker.sites.length > 12 && (
+                  <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.6)" }}>
+                    +{blocker.sites.length - 12} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           {cooldown > 0 && (
             <p
               style={{
