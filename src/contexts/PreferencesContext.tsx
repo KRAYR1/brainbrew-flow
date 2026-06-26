@@ -20,7 +20,6 @@ export interface UserPreferences {
   appearance: {
     theme: ThemeType;
     accentColor: string;
-    showMotivationalQuotes: boolean;
     compactMode: boolean;
   };
   // Streak settings
@@ -30,8 +29,6 @@ export interface UserPreferences {
     longestStreak: number;
     lastActiveDate: string;
   };
-  // Custom quotes
-  customQuotes: Array<{ text: string; author: string }>;
   // Dashboard widgets
   dashboardWidgets: {
     showTimer: boolean;
@@ -55,7 +52,6 @@ const defaultPreferences: UserPreferences = {
   appearance: {
     theme: "system",
     accentColor: "indigo",
-    showMotivationalQuotes: true,
     compactMode: false,
   },
   streakSettings: {
@@ -64,7 +60,6 @@ const defaultPreferences: UserPreferences = {
     longestStreak: 0,
     lastActiveDate: "",
   },
-  customQuotes: [],
   dashboardWidgets: {
     showTimer: true,
     showStreak: true,
@@ -80,8 +75,6 @@ interface PreferencesContextType {
   updateAppearance: (updates: Partial<UserPreferences["appearance"]>) => void;
   updateStreakSettings: (updates: Partial<UserPreferences["streakSettings"]>) => void;
   updateDashboardWidgets: (updates: Partial<UserPreferences["dashboardWidgets"]>) => void;
-  addCustomQuote: (quote: { text: string; author: string }) => void;
-  removeCustomQuote: (index: number) => void;
   resetToDefaults: () => void;
 }
 
@@ -125,20 +118,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const addCustomQuote = (quote: { text: string; author: string }) => {
-    setPreferences((prev) => ({
-      ...prev,
-      customQuotes: [...prev.customQuotes, quote],
-    }));
-  };
-
-  const removeCustomQuote = (index: number) => {
-    setPreferences((prev) => ({
-      ...prev,
-      customQuotes: prev.customQuotes.filter((_, i) => i !== index),
-    }));
-  };
-
   const resetToDefaults = () => {
     setPreferences(defaultPreferences);
   };
@@ -152,8 +131,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         updateAppearance,
         updateStreakSettings,
         updateDashboardWidgets,
-        addCustomQuote,
-        removeCustomQuote,
         resetToDefaults,
       }}
     >
