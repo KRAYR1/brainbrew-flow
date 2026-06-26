@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { usePreferences, ThemeType } from "@/contexts/PreferencesContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
+import { BlockedSitesManager } from "@/components/BlockedSitesManager";
 
 const accentColors = [
   { name: "Indigo", value: "indigo", class: "bg-indigo-500" },
@@ -203,6 +204,11 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Website Blocker */}
+          <BlockedSitesManager />
+
+
 
           {/* Appearance */}
           <Card>
