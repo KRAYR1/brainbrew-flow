@@ -5,22 +5,17 @@ import {
   Clock,
   Palette,
   Target,
-  Quote,
   LayoutDashboard,
   RotateCcw,
-  Plus,
-  Trash2,
   Check,
   Sun,
   Moon,
   Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePreferences, ThemeType } from "@/contexts/PreferencesContext";
 import { useToast } from "@/hooks/use-toast";
