@@ -48,13 +48,10 @@ const Settings = () => {
     updateAppearance,
     updateStreakSettings,
     updateDashboardWidgets,
-    addCustomQuote,
-    removeCustomQuote,
     resetToDefaults,
   } = usePreferences();
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
-  const [newQuote, setNewQuote] = useState({ text: "", author: "" });
   const [mounted, setMounted] = useState(false);
 
   // Avoid hydration mismatch
@@ -65,19 +62,6 @@ const Settings = () => {
   const handleThemeChange = (newTheme: ThemeType) => {
     setTheme(newTheme);
     updateAppearance({ theme: newTheme });
-  };
-
-  const handleAddQuote = () => {
-    if (!newQuote.text.trim()) {
-      toast({ title: "Please enter a quote", variant: "destructive" });
-      return;
-    }
-    addCustomQuote({
-      text: newQuote.text.trim(),
-      author: newQuote.author.trim() || "Unknown",
-    });
-    setNewQuote({ text: "", author: "" });
-    toast({ title: "Quote added!" });
   };
 
   const handleReset = () => {
@@ -264,20 +248,6 @@ const Settings = () => {
               </div>
               <div className="flex items-center justify-between pt-4 border-t">
                 <div>
-                  <Label>Show Motivational Quotes</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Display inspiring quotes in the corner
-                  </p>
-                </div>
-                <Switch
-                  checked={preferences.appearance.showMotivationalQuotes}
-                  onCheckedChange={(checked) =>
-                    updateAppearance({ showMotivationalQuotes: checked })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
                   <Label>Compact Mode</Label>
                   <p className="text-sm text-muted-foreground">
                     Reduce spacing for more content visibility
@@ -388,74 +358,6 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* Custom Quotes */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Quote className="h-5 w-5 text-primary" />
-                Custom Quotes
-              </CardTitle>
-              <CardDescription>Add your own motivational quotes</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Add new quote form */}
-              <div className="space-y-3 rounded-lg border border-dashed p-4">
-                <Textarea
-                  placeholder="Enter your inspirational quote..."
-                  value={newQuote.text}
-                  onChange={(e) => setNewQuote({ ...newQuote, text: e.target.value })}
-                  rows={2}
-                />
-                <div className="flex gap-3">
-                  <Input
-                    placeholder="Author (optional)"
-                    value={newQuote.author}
-                    onChange={(e) => setNewQuote({ ...newQuote, author: e.target.value })}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleAddQuote} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Quote
-                  </Button>
-                </div>
-              </div>
-
-              {/* Existing quotes */}
-              {preferences.customQuotes.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Your Quotes</Label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {preferences.customQuotes.map((quote, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-start gap-3 rounded-lg bg-muted p-3"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground">"{quote.text}"</p>
-                          <p className="text-xs text-muted-foreground mt-1">— {quote.author}</p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={() => removeCustomQuote(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {preferences.customQuotes.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No custom quotes yet. Add your first one above!
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </motion.div>
     </Layout>
