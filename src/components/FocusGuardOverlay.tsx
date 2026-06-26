@@ -25,6 +25,10 @@ export function FocusGuardOverlay() {
   });
   const hiddenAtRef = useRef<number | null>(null);
   const catHostRef = useRef<HTMLDivElement | null>(null);
+  const blockerRef = useRef(blocker);
+  useEffect(() => {
+    blockerRef.current = blocker;
+  }, [blocker]);
 
   // Listen for pomodoro state broadcasts
   useEffect(() => {
@@ -50,7 +54,12 @@ export function FocusGuardOverlay() {
       } else if (hiddenAtRef.current !== null) {
         const away = Math.round((Date.now() - hiddenAtRef.current) / 1000);
         hiddenAtRef.current = null;
-        if (away >= 3 && stateRef.current.isRunning && stateRef.current.mode === "work") {
+        if (
+          away >= 3 &&
+          stateRef.current.isRunning &&
+          stateRef.current.mode === "work" &&
+          blockerRef.current.enabled
+        ) {
           setAwaySeconds(away);
           setCooldown(5);
           setActive(true);
