@@ -52,7 +52,6 @@ const defaultPreferences: UserPreferences = {
   appearance: {
     theme: "system",
     accentColor: "indigo",
-    showMotivationalQuotes: true,
     compactMode: false,
   },
   streakSettings: {
@@ -61,7 +60,6 @@ const defaultPreferences: UserPreferences = {
     longestStreak: 0,
     lastActiveDate: "",
   },
-  customQuotes: [],
   dashboardWidgets: {
     showTimer: true,
     showStreak: true,
