@@ -1,5 +1,4 @@
 import { Sidebar } from "./Sidebar";
-import { MotivationalQuote } from "../MotivationalQuote";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,7 +13,6 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </div>
       </main>
-      <MotivationalQuote />
     </div>
   );
 }
