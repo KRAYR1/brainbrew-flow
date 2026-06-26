@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { createCat3D } from "@/lib/cat3d";
+import { useBlockedSites } from "@/hooks/useBlockedSites";
 
 /**
  * Social-Detox-style focus guard.
@@ -14,6 +15,7 @@ import { createCat3D } from "@/lib/cat3d";
  *  - document "visibilitychange"
  */
 export function FocusGuardOverlay() {
+  const { settings: blocker } = useBlockedSites();
   const [active, setActive] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [awaySeconds, setAwaySeconds] = useState(0);
