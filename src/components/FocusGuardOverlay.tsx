@@ -3,22 +3,30 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { createCat3D } from "@/lib/cat3d";
 import { useBlockedSites } from "@/hooks/useBlockedSites";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Social-Detox-style focus guard.
- * When a Pomodoro WORK session is running and the user switches away from the
- * BrainBrew tab, an immersive cat overlay greets them on return with a short
- * cooldown before they can dismiss it. Encourages them to stay focused.
+ * Focus guard overlay.
  *
- * Listens to:
- *  - "pomodoro:state" { isRunning: boolean, mode: "work" | "shortBreak" | "longBreak" }
- *  - document "visibilitychange"
+ * When a Pomodoro WORK session is running and the user switches away from
+ * BrainBrews (likely to a blocked site like YouTube), an immersive cat overlay
+ * intercepts on return. A cat chatbot ("Whiskers") asks for the user's intent,
+ * an AI edge function classifies it as ENTERTAINMENT or STUDY, and the overlay
+ * shows an enhanced block message redirecting the user back to BrainBrews when
+ * entertainment is detected.
  */
 export function FocusGuardOverlay() {
   const { settings: blocker } = useBlockedSites();
   const [active, setActive] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
   const [awaySeconds, setAwaySeconds] = useState(0);
+  const [intent, setIntent] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [classification, setClassification] = useState<
+    "entertainment" | "study" | null
+  >(null);
+  const [catReply, setCatReply] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
   const stateRef = useRef<{ isRunning: boolean; mode: string }>({
     isRunning: false,
     mode: "work",
@@ -30,7 +38,7 @@ export function FocusGuardOverlay() {
     blockerRef.current = blocker;
   }, [blocker]);
 
-  // Listen for pomodoro state broadcasts
+  // Pomodoro state broadcasts
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -39,12 +47,16 @@ export function FocusGuardOverlay() {
         isRunning: !!detail.isRunning,
         mode: detail.mode ?? "work",
       };
+      // If pomodoro ended or moved to break, lift the guard.
+      if (!detail.isRunning || detail.mode !== "work") {
+        setActive(false);
+      }
     };
     window.addEventListener("pomodoro:state", handler);
     return () => window.removeEventListener("pomodoro:state", handler);
   }, []);
 
-  // Track tab visibility
+  // Tab visibility tracking
   useEffect(() => {
     const onVis = () => {
       if (document.hidden) {
@@ -61,7 +73,10 @@ export function FocusGuardOverlay() {
           blockerRef.current.enabled
         ) {
           setAwaySeconds(away);
-          setCooldown(5);
+          setIntent("");
+          setClassification(null);
+          setCatReply("");
+          setError(null);
           setActive(true);
         }
       }
@@ -70,15 +85,7 @@ export function FocusGuardOverlay() {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
-  // Cooldown ticker
-  useEffect(() => {
-    if (!active) return;
-    if (cooldown <= 0) return;
-    const id = window.setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
-    return () => window.clearInterval(id);
-  }, [active, cooldown]);
-
-  // Mount 3D cat when overlay opens
+  // Mount 3D cat
   useEffect(() => {
     if (!active || !catHostRef.current) return;
     const cleanup = createCat3D(catHostRef.current);
@@ -87,6 +94,37 @@ export function FocusGuardOverlay() {
       if (catHostRef.current) catHostRef.current.innerHTML = "";
     };
   }, [active]);
+
+  const submitIntent = async () => {
+    const trimmed = intent.trim();
+    if (!trimmed || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const siteList = blockerRef.current.sites.map((s) => s.label).join(", ");
+      const { data, error: fnErr } = await supabase.functions.invoke(
+        "cat-intent",
+        { body: { intent: trimmed, site: siteList } },
+      );
+      if (fnErr) throw fnErr;
+      const cls =
+        data?.classification === "study" ? "study" : "entertainment";
+      setClassification(cls);
+      setCatReply(
+        data?.reply ||
+          (cls === "entertainment"
+            ? "Meow! Come back to BrainBrews and finish the timer. 🐾"
+            : "Purr — try BrainBrews' own study tools first. 🐾"),
+      );
+    } catch (e) {
+      console.error(e);
+      setError("Whiskers couldn't reach the AI right now. Stay focused anyway! 🐾");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const dismissAllowed = classification === "study";
 
   if (typeof document === "undefined") return null;
 
@@ -111,158 +149,269 @@ export function FocusGuardOverlay() {
             fontFamily: "system-ui, sans-serif",
             textAlign: "center",
             padding: 24,
-            overflow: "hidden",
+            overflow: "auto",
           }}
         >
-          {/* Starfield */}
           <Stars />
 
           <div
             ref={catHostRef}
             style={{
-              width: 300,
-              height: 300,
+              width: 240,
+              height: 240,
               position: "relative",
               filter: "drop-shadow(0 0 30px rgba(100, 150, 255, 0.35))",
             }}
           />
 
-          <div
-            style={{
-              width: 200,
-              height: 24,
-              background:
-                "radial-gradient(ellipse, rgba(80,120,255,0.35), transparent 70%)",
-              borderRadius: "50%",
-              marginTop: -20,
-            }}
-          />
-
           <h1
             style={{
-              fontSize: "2rem",
+              fontSize: "1.8rem",
               fontWeight: 900,
               color: "#fff",
-              margin: "12px 0 4px",
+              margin: "4px 0 2px",
               textShadow:
                 "0 0 24px rgba(120,100,255,0.9), 0 2px 4px rgba(0,0,0,0.5)",
               letterSpacing: 2,
             }}
           >
-            STAY FOCUSED
+            WHISKERS IS WATCHING
           </h1>
           <p
             style={{
-              fontSize: "1.05rem",
+              fontSize: "0.95rem",
               color: "#9988ff",
               fontWeight: 700,
-              marginBottom: 6,
+              marginBottom: 14,
               textShadow: "0 0 12px rgba(150,120,255,0.6)",
             }}
           >
-            You wandered off for {awaySeconds}s
+            You wandered off for {awaySeconds}s — Pomodoro still running.
           </p>
-          <p
+
+          {/* Chatbot card */}
+          <div
             style={{
-              fontSize: "0.95rem",
-              color: "rgba(200,200,230,0.75)",
-              maxWidth: 360,
-              lineHeight: 1.5,
+              width: "min(520px, 100%)",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 16,
+              padding: 18,
+              backdropFilter: "blur(10px)",
+              textAlign: "left",
             }}
           >
-            Your Pomodoro is still running. Come back to BrainBrew and finish
-            strong — the cat is watching. 🐾
-          </p>
+            <p
+              style={{
+                fontSize: "0.7rem",
+                textTransform: "uppercase",
+                letterSpacing: 1.4,
+                color: "#a8b3ff",
+                fontWeight: 700,
+                marginBottom: 8,
+              }}
+            >
+              🐱 Whiskers asks:
+            </p>
+            <p
+              style={{
+                color: "#fff",
+                fontSize: "0.95rem",
+                marginBottom: 12,
+                lineHeight: 1.45,
+              }}
+            >
+              What were you about to do? Tell me your intent and I'll decide if
+              it can wait until the timer ends.
+            </p>
+
+            <textarea
+              value={intent}
+              onChange={(e) => setIntent(e.target.value)}
+              disabled={loading || classification !== null}
+              placeholder="e.g. 'watch one quick video' or 'look up a chemistry formula'"
+              rows={2}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                background: "rgba(0,0,0,0.35)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 10,
+                color: "#fff",
+                fontSize: "0.9rem",
+                resize: "vertical",
+                fontFamily: "inherit",
+                outline: "none",
+              }}
+            />
+
+            {classification === null && (
+              <button
+                onClick={submitIntent}
+                disabled={loading || !intent.trim()}
+                style={{
+                  marginTop: 10,
+                  width: "100%",
+                  padding: "11px 16px",
+                  fontSize: "0.95rem",
+                  fontWeight: 700,
+                  background:
+                    loading || !intent.trim()
+                      ? "rgba(255,255,255,0.12)"
+                      : "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  cursor:
+                    loading || !intent.trim() ? "not-allowed" : "pointer",
+                }}
+              >
+                {loading ? "Whiskers is thinking…" : "Ask Whiskers 🐾"}
+              </button>
+            )}
+
+            {error && (
+              <p
+                style={{
+                  marginTop: 10,
+                  color: "#ffb0b0",
+                  fontSize: "0.85rem",
+                }}
+              >
+                {error}
+              </p>
+            )}
+
+            {classification && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: 14,
+                  borderRadius: 12,
+                  background:
+                    classification === "entertainment"
+                      ? "linear-gradient(135deg, rgba(255,60,90,0.18), rgba(255,120,60,0.12))"
+                      : "linear-gradient(135deg, rgba(80,200,140,0.18), rgba(60,180,255,0.12))",
+                  border:
+                    classification === "entertainment"
+                      ? "1px solid rgba(255,120,150,0.45)"
+                      : "1px solid rgba(120,220,180,0.4)",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 800,
+                    letterSpacing: 1.4,
+                    textTransform: "uppercase",
+                    color:
+                      classification === "entertainment"
+                        ? "#ffb0c4"
+                        : "#a8f0c8",
+                    marginBottom: 6,
+                  }}
+                >
+                  {classification === "entertainment"
+                    ? "🚫 Entertainment detected — Blocked"
+                    : "📚 Study intent — Proceed mindfully"}
+                </p>
+                <p
+                  style={{
+                    color: "#fff",
+                    fontSize: "0.95rem",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {catReply}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Blocked sites chips */}
           {blocker.sites.length > 0 && (
             <div
               style={{
                 marginTop: 14,
-                maxWidth: 420,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 12,
-                padding: "10px 14px",
+                maxWidth: 520,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 6,
+                justifyContent: "center",
               }}
             >
-              <p
-                style={{
-                  fontSize: "0.75rem",
-                  textTransform: "uppercase",
-                  letterSpacing: 1.2,
-                  color: "#ff80a0",
-                  fontWeight: 700,
-                  marginBottom: 6,
-                }}
-              >
-                Blocked until timer ends
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
-                {blocker.sites.slice(0, 12).map((s) => (
-                  <span
-                    key={s.url}
-                    style={{
-                      fontSize: "0.72rem",
-                      padding: "3px 9px",
-                      borderRadius: 999,
-                      background: "rgba(255,90,120,0.18)",
-                      color: "#ffd0dc",
-                      border: "1px solid rgba(255,120,150,0.35)",
-                    }}
-                  >
-                    {s.label}
-                  </span>
-                ))}
-                {blocker.sites.length > 12 && (
-                  <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.6)" }}>
-                    +{blocker.sites.length - 12} more
-                  </span>
-                )}
-              </div>
+              {blocker.sites.slice(0, 10).map((s) => (
+                <span
+                  key={s.url}
+                  style={{
+                    fontSize: "0.7rem",
+                    padding: "3px 9px",
+                    borderRadius: 999,
+                    background: "rgba(255,90,120,0.18)",
+                    color: "#ffd0dc",
+                    border: "1px solid rgba(255,120,150,0.35)",
+                  }}
+                >
+                  {s.label}
+                </span>
+              ))}
             </div>
           )}
-          {cooldown > 0 && (
-            <p
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap", justifyContent: "center" }}>
+            <button
+              onClick={() => setActive(false)}
+              disabled={!dismissAllowed}
+              title={
+                dismissAllowed
+                  ? "Continue studying"
+                  : "Whiskers must approve first — answer the question above"
+              }
               style={{
-                fontSize: "1rem",
-                fontWeight: "bold",
-                color: "#ff6090",
-                marginTop: 10,
-                textShadow: "0 0 10px rgba(255,80,120,0.5)",
+                padding: "12px 28px",
+                fontSize: "0.95rem",
+                fontWeight: 700,
+                background: dismissAllowed
+                  ? "linear-gradient(135deg, #10b981, #059669)"
+                  : "rgba(255,255,255,0.08)",
+                color: dismissAllowed ? "#fff" : "rgba(255,255,255,0.4)",
+                border: "none",
+                borderRadius: 50,
+                cursor: dismissAllowed ? "pointer" : "not-allowed",
+                boxShadow: dismissAllowed
+                  ? "0 4px 24px rgba(16,185,129,0.45)"
+                  : "none",
               }}
             >
-              You can dismiss in {cooldown}s
-            </p>
-          )}
-          <button
-            disabled={cooldown > 0}
-            onClick={() => setActive(false)}
-            style={{
-              marginTop: 20,
-              padding: "13px 36px",
-              fontSize: "1rem",
-              fontWeight: 700,
-              background:
-                cooldown > 0
-                  ? "rgba(255,255,255,0.12)"
-                  : "linear-gradient(135deg, #7c3aed, #4f46e5)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 50,
-              cursor: cooldown > 0 ? "not-allowed" : "pointer",
-              boxShadow:
-                cooldown > 0
-                  ? "none"
-                  : "0 4px 24px rgba(120,60,255,0.55)",
-              transition: "transform 0.15s, box-shadow 0.15s",
-              letterSpacing: 0.5,
-            }}
-          >
-            {cooldown > 0 ? "Hold on…" : "Back to Focus"}
-          </button>
+              {dismissAllowed ? "Back to studying 📚" : "Locked 🔒"}
+            </button>
+            {classification === "entertainment" && (
+              <button
+                onClick={() => {
+                  setActive(false);
+                  window.location.href = "/";
+                }}
+                style={{
+                  padding: "12px 28px",
+                  fontSize: "0.95rem",
+                  fontWeight: 700,
+                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 50,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 24px rgba(120,60,255,0.55)",
+                }}
+              >
+                Take me to BrainBrews →
+              </button>
+            )}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
 
