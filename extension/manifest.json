@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Whiskers — BrainBrews Focus Guard",
+  "version": "1.0.0",
+  "description": "Blocks distracting sites during BrainBrews Pomodoro work sessions with the Whiskers AI cat overlay.",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": [
+    "https://brainbrew-flow.lovable.app/*",
+    "https://*.lovable.app/*",
+    "http://localhost/*",
+    "https://jkoctfltndapqerdmgvn.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://brainbrew-flow.lovable.app/*",
+        "https://*.lovable.app/*",
+        "http://localhost/*",
+        "http://localhost:*/*"
+      ],
+      "js": ["bridge.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": ["<all_urls>"],
+      "exclude_matches": [
+        "https://brainbrew-flow.lovable.app/*",
+        "https://*.lovable.app/*",
+        "http://localhost/*",
+        "http://localhost:*/*"
+      ],
+      "js": ["guard.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_icon": "icon.png",
+    "default_title": "Whiskers is watching 🐾"
+  }
+}
