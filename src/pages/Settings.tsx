@@ -21,7 +21,6 @@ import { usePreferences, ThemeType } from "@/contexts/PreferencesContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { BlockedSitesManager } from "@/components/BlockedSitesManager";
-import { ExtensionInstallCard } from "@/components/ExtensionInstallCard";
 
 const accentColors = [
   { name: "Indigo", value: "indigo", class: "bg-indigo-500" },
@@ -188,8 +187,7 @@ const Settings = () => {
           {/* Website Blocker */}
           <BlockedSitesManager />
 
-          {/* Companion Extension */}
-          <ExtensionInstallCard />
+
 
 
 
