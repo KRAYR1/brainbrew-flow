@@ -359,13 +359,8 @@ export function seedDemoWorkspace() {
     window.localStorage.setItem(KEYS.decks, JSON.stringify(decks));
     window.localStorage.setItem(KEYS.chat, JSON.stringify(chat));
     window.localStorage.setItem(DEMO_FLAG_KEY, "1");
-
-    // Only set preferences if the user hasn't already customized them.
-    if (!window.localStorage.getItem(KEYS.preferences)) {
-      window.localStorage.setItem(KEYS.preferences, JSON.stringify(preferences));
-    }
-    window.localStorage.setItem(DEMO_FLAG_KEY, "1");
   } catch (e) {
+
     console.error("Failed to seed demo workspace", e);
   }
 }
