@@ -9,6 +9,8 @@ import { AssistantProvider } from "@/contexts/AssistantContext";
 import { JarvisAssistant } from "@/components/JarvisAssistant";
 import { FocusGuardOverlay } from "@/components/FocusGuardOverlay";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { DemoBanner } from "@/components/DemoBanner";
+
 import Index from "./pages/Index";
 import Notes from "./pages/Notes";
 import Assignments from "./pages/Assignments";
@@ -31,6 +33,8 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <AssistantProvider>
+              <DemoBanner />
+
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />

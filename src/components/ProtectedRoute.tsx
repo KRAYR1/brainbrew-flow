@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
+import { isDemoMode } from "@/lib/demoSeed";
+
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -27,6 +29,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!session) return <Navigate to="/auth" replace />;
+  if (!session && !isDemoMode()) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 };
+
