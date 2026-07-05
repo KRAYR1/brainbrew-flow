@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Brain } from "lucide-react";
+import { Brain, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { seedDemoWorkspace } from "@/lib/demoSeed";
+
 
 const Auth = () => {
   const navigate = useNavigate();
