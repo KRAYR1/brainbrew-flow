@@ -1,77 +1,102 @@
-# Whiskers Companion Extension — Build Plan
 
-## Goal
-A downloadable Chrome/Chromium extension that enforces BrainBrews' blocked-sites list on external sites (YouTube, Netflix, etc.) during Pomodoro **work** sessions, using the same Whiskers overlay + `cat-intent` AI classifier.
+# BrainBrew Launch Polish Plan
 
-## Architecture (how the pieces sync)
+Positioning: **"The All-in-One Student OS"** — one workspace that replaces Notion + Todoist + Google Calendar + Anki + Forest + ChatGPT for students. Whiskers is the AI layer that ties it together.
 
-```text
- BrainBrews tab                    Extension                  Blocked site tab
- --------------                    ---------                  ----------------
- Pomodoro state  ──►  chrome.storage.local  ──►  content script reads state
- Blocked list    ──►  (via bridge script)        │
-                                                 ▼
-                                          If work session + host matches
-                                                 ▼
-                                          Inject Whiskers overlay iframe
-                                                 ▼
-                                          User submits intent
-                                                 ▼
-                                          fetch() → cat-intent edge fn
-                                                 ▼
-                                          entertainment → lock + redirect btn
-                                          study        → fade out
-```
+Delivered in three sequenced phases so you always have something shippable.
 
-**Sync mechanism:** BrainBrews already broadcasts a `pomodoro:state` CustomEvent and stores the blocked list in `localStorage["brainbrew-blocker"]`. A tiny **bridge content script** injected only on the BrainBrews origin listens for both and mirrors them into `chrome.storage.local`, which the extension's other content scripts read.
+---
 
-## Deliverables
+## Phase 1 — Demo Mode (ship-ready showcase)
 
-### 1. Extension source — `extension/` directory in the repo
+Goal: anyone (investor, professor, first user) can hit the site and *experience* the app in 15 seconds — no signup, no empty screens.
 
-- `extension/manifest.json` — MV3, permissions: `storage`, `activeTab`, `scripting`; `host_permissions` for the BrainBrews origins (preview + published + localhost) and `<all_urls>` for the overlay content script.
-- `extension/background.js` — Service worker. Listens for storage changes; on timer end, broadcasts a message to all tabs to remove the overlay.
-- `extension/bridge.js` — Content script matched to BrainBrews origins only. Listens to `window` for `pomodoro:state` events and polls `localStorage["brainbrew-blocker"]`. Writes `{ isRunning, mode, blockerEnabled, sites, updatedAt }` into `chrome.storage.local`.
-- `extension/guard.js` — Content script matched to `<all_urls>`. On load:
-  1. Reads `chrome.storage.local` state.
-  2. If (work session running) AND (blocker enabled) AND (current hostname matches any blocked site), injects the overlay.
-  3. Subscribes to `chrome.storage.onChanged` to remove the overlay when the timer ends / mode changes to break.
-- `extension/overlay.js` + `extension/overlay.css` — Vanilla-JS re-implementation of the FocusGuardOverlay visual (starfield, gradient bg, chatbot card, buttons). Uses a Shadow DOM root to avoid host-page CSS collisions. Fires `fetch()` directly at the cat-intent edge function URL with the anon key (both public).
-- `extension/icon.png` (128×128) — Whiskers icon.
+1. **"Try the demo" entry point** on the landing page and login screen → seeds localStorage with a realistic student persona ("Maya, sophomore, Bio major").
+2. **Seed dataset**:
+   - 3 subjects (Biology, Calculus II, English Lit) with distinct accent colors
+   - 12 tasks across today / this week / overdue
+   - 6 notes (lecture notes, essay draft, formula sheet…)
+   - 2 flashcard decks with SM-2 progress mid-review
+   - Calendar events for the next 14 days
+   - Pomodoro history (last 7 days of sessions)
+   - A short Whiskers chat history
+3. **"Demo mode" banner** at top: "You're exploring a demo. [Reset] · [Sign up to save]".
+4. **Reset button** wipes and re-seeds cleanly.
+5. **Guided tour** (optional, dismissable) — 5-step spotlight tour: Dashboard → Tasks → Flashcards → Pomodoro → Whiskers.
 
-### 2. BrainBrews-side changes
+## Phase 2 — In-App UX Polish
 
-- **`src/hooks/useBlockedSites.ts`** — no logic change, but bump a `updatedAt` timestamp on every write so the bridge sees changes reliably (optional; storage event already fires).
-- **`src/components/PomodoroTimer.tsx`** — verify it already dispatches `pomodoro:state`; if it only dispatches on start/stop, ensure it also dispatches on mode change and completion. (Read-only check first; edit only if missing.)
-- **New page section: `src/pages/Settings.tsx`** — add a "Companion Extension" card under the existing Blocked Sites section:
-  - Brief 3-step install guide.
-  - **Download button** that fetches `/whiskers-extension.zip` as a blob and triggers download (the workaround required for Lovable preview auth).
-  - Link to `chrome://extensions` with copy button.
+Goal: every screen feels intentional and consistent, so the pitch-deck screenshots sell themselves.
 
-### 3. Packaging
+1. **Onboarding flow** for new (non-demo) users: 3 screens — pick subjects & colors, add first task, meet Whiskers.
+2. **Empty states** across every feature (tasks, notes, flashcards, calendar, chat) — illustrated, single CTA, no dead screens.
+3. **Consistency pass**:
+   - Unified page headers (title + subtitle + primary action)
+   - Consistent card/list styling across notes, tasks, decks
+   - Consistent spacing scale, button hierarchy, icon set
+4. **Micro-animations**: fade-in on route change, scale-in on card open, subtle Whiskers idle animation.
+5. **Dashboard upgrade**: hero "Today" view — today's tasks, next class, due flashcards, pomodoro streak, Whiskers nudge — all above the fold.
+6. **Loading & error states** for every async surface (AI calls, exports).
+7. **Keyboard shortcuts** + a `?` shortcut cheatsheet modal.
+8. **Mobile responsive audit** (still web, but pitch demos happen on phones).
 
-- Zip `extension/` into `public/whiskers-extension.zip` using `nix run nixpkgs#zip` so it's served as a static asset at `/whiskers-extension.zip`.
-- Re-zip whenever extension source changes (documented in a short `extension/README.md`).
+## Phase 3 — Landing Page + Pitch Deck
 
-## Behavior details
+Goal: a public-facing site and a downloadable deck that sell the "Student OS" story.
 
-- **Trigger condition:** `state.isRunning === true && state.mode === "work" && state.blockerEnabled && sites.some(s => location.hostname.endsWith(s.url))`.
-- **Overlay removal:** Any storage change where the new state fails the trigger → overlay fades and is removed from the DOM.
-- **AI call from extension:** `POST https://jkoctfltndapqerdmgvn.supabase.co/functions/v1/cat-intent` with `apikey` + `Authorization: Bearer <anon>` headers. Both keys are already public.
-- **Entertainment lock:** Overlay stays until either (a) user clicks "Take me to BrainBrews →" (opens BrainBrews in the same tab), or (b) the Pomodoro ends (auto-unlock).
-- **Study approval:** Overlay fades, but re-triggers if the user navigates to another blocked site in the same work session (each page load re-checks).
-- **No overlay on BrainBrews itself:** guard.js checks `location.hostname` against the BrainBrews origins and skips — the in-app `FocusGuardOverlay` handles that case.
+### Landing page (`/`, when logged out)
 
-## Out of scope
+Sections, in order:
+1. **Hero** — headline "The Operating System for Students", subhead, two CTAs: "Try the demo" (no signup) and "Sign up free".
+2. **Problem strip** — "Your notes are in Notion. Tasks in Todoist. Flashcards in Quizlet. Focus in Forest. Chat in ChatGPT. Five apps. Five subscriptions. Zero context."
+3. **Solution / product showcase** — animated screenshots (real UI), one per pillar: Notes · Tasks · Calendar · Flashcards · Focus · Whiskers AI.
+4. **"Whiskers" spotlight** — the AI companion, patent-pending badge.
+5. **How it works** — 3 steps: Add your subjects → Live your semester → Whiskers keeps you on track.
+6. **Feature grid** — 6 tiles covering the pillars.
+7. **Social proof placeholder** — testimonial slots + "As seen in / Trusted by" logo row (empty-state ready).
+8. **Pricing tease** — Free / Student Pro (coming soon) / Campus (B2B, contact).
+9. **FAQ**.
+10. **Footer** with links to pitch deck, patent notice, contact.
 
-- Firefox port (Manifest V3 support differs; can be added later).
-- Chrome Web Store publishing (unpacked install only, per Lovable extension guide).
-- Blocking sites when *no* BrainBrews tab has ever been opened (bridge needs at least one visit to seed `chrome.storage.local`). Documented in the install guide.
+### Pitch deck (`/pitch` route + downloadable PDF)
 
-## Verification
+Built with the slides skill (1920×1080, in-app viewer + print/PDF export):
 
-1. Build zip, confirm it appears at `/whiskers-extension.zip`.
-2. Load unpacked in Chrome, open BrainBrews, start a work Pomodoro, open youtube.com in a new tab → overlay should appear within ~1s.
-3. Type "watch a video" → entertainment card + redirect button.
-4. End the Pomodoro → overlay auto-removes from the YouTube tab.
-5. Start a break session → no overlay on newly-opened blocked sites.
+1. Title — BrainBrew: The Student OS
+2. The problem — app fragmentation for students (stats + quotes)
+3. The insight — students don't need another app, they need one context
+4. The product — screenshot montage of the six pillars
+5. Whiskers — the AI layer + patent-pending
+6. Demo — QR code + short URL to the live demo
+7. Market — TAM (global higher-ed students), SAM, SOM
+8. Business model — Free → Student Pro ($3/mo) → Campus licensing
+9. Traction / roadmap — where we are, next 6/12 months
+10. Competition — feature matrix vs Notion/Todoist/Anki/Forest
+11. Moat — patent + AI context graph + switching costs (all data in one place)
+12. Ask — what you're raising and what it funds
+13. Team + contact
+
+Deck is viewable in-browser (present mode, keyboard nav) and exportable as PDF.
+
+---
+
+## Technical Details
+
+- **Demo seed**: single `src/lib/demoSeed.ts` module exporting a `seedDemoWorkspace()` function that writes to the same localStorage keys the app already uses. Guarded by a `brainbrew:demo` flag so the reset/exit banner knows to show.
+- **Landing page**: new `src/pages/Landing.tsx` mounted at `/` for unauthenticated users; existing dashboard becomes `/app`. Route guard in `App.tsx`.
+- **Pitch deck**: `src/pages/pitch/` using the slides-app skill pattern — `ScaledSlide` + `SlideLayout` at 1920×1080, `?print` param for PDF export, keyboard nav for present mode.
+- **Design system**: audit `index.css` tokens; add landing-specific tokens (hero gradient, marketing-only accents) as semantic tokens, not hardcoded.
+- **Animations**: use existing `fade-in`, `scale-in`, `hover-scale` utilities; add framer-motion only for landing hero if needed.
+- **No backend changes** in phase 1–2. Phase 3 landing can stay static; email capture (if added) would go through Lovable Cloud.
+- **SEO**: real `<title>` and `<meta description>` in `index.html`, Open Graph tags, single H1 on landing.
+
+---
+
+## Suggested build order (each phase is independently shippable)
+
+1. Phase 1 (demo seed + banner + tour) — ~1 build turn
+2. Phase 2 (onboarding, empty states, consistency, dashboard) — 2–3 turns
+3. Phase 3a (landing page) — 1–2 turns
+4. Phase 3b (pitch deck) — 1–2 turns
+
+Approve and I'll start with Phase 1.
