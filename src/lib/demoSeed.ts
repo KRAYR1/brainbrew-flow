@@ -20,12 +20,13 @@ const KEYS = {
 } as const;
 
 const iso = (d: Date) => d.toISOString();
-const daysFromNow = (days: number, hour = 23, min = 59) => {
+const daysFromNow = (days: number, hour = 23, min = 59, sec = 0) => {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  d.setHours(hour, min, 0, 0);
+  d.setHours(hour, min, sec, 0);
   return d;
 };
+
 const uid = (p: string, i: number) => `demo-${p}-${i}`;
 
 const subjects: Subject[] = [
