@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Brain } from "lucide-react";
+import { Brain, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { seedDemoWorkspace } from "@/lib/demoSeed";
+
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -64,8 +66,30 @@ const Auth = () => {
           </svg>
           {loading ? "Signing in..." : "Continue with Google"}
         </Button>
+
+        <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-border" />
+          or
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <Button
+          onClick={() => {
+            seedDemoWorkspace();
+            navigate("/", { replace: true });
+          }}
+          variant="secondary"
+          className="w-full gap-2 h-11"
+        >
+          <Sparkles className="h-4 w-4" />
+          Try the demo — no signup
+        </Button>
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          Explore BrainBrew with a full sample student workspace. Data stays in your browser.
+        </p>
       </motion.div>
     </div>
+
   );
 };
 
