@@ -336,12 +336,6 @@ const chat: ChatMessage[] = [
   },
 ];
 
-const preferences = {
-  accentColor: "emerald",
-  focusGuard: { enabled: false, blockedSites: [] as string[] },
-  whiskersName: "Whiskers",
-  onboarded: true,
-};
 
 export function isDemoMode(): boolean {
   try {
