@@ -48,19 +48,20 @@ export const DemoBanner = () => {
 
   return (
     <div className="sticky top-0 z-40 border-b border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2 text-sm">
-        <span className="flex items-center gap-2 font-medium text-foreground">
-          <Sparkles className="h-4 w-4 text-primary" />
-          You're exploring a demo — data lives only in your browser.
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 text-xs sm:text-sm sm:gap-3 sm:px-4">
+        <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
+          <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+          <span className="truncate">Demo mode — data stays in your browser.</span>
         </span>
-        <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={handleReset} className="h-8 gap-1.5">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <Button size="sm" variant="ghost" onClick={handleReset} className="h-8 gap-1.5 px-2">
             <RotateCcw className="h-3.5 w-3.5" />
-            Reset
+            <span className="hidden sm:inline">Reset</span>
           </Button>
-          <Button size="sm" variant="default" onClick={handleExit} className="h-8 gap-1.5">
+          <Button size="sm" variant="default" onClick={handleExit} className="h-8 gap-1.5 px-2">
             <LogIn className="h-3.5 w-3.5" />
-            Sign up to save
+            <span className="hidden sm:inline">Sign up to save</span>
+            <span className="sm:hidden">Sign up</span>
           </Button>
           <button
             aria-label="Dismiss demo banner"
