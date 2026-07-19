@@ -141,14 +141,3 @@
     background-image: var(--gradient-primary);
   }
 }
-
-@layer utilities {
-  .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50;
-  }
-  
-  .gradient-text {
-    @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-primary);
-  }
-}
