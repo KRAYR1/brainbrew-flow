@@ -141,3 +141,18 @@
     background-image: var(--gradient-primary);
   }
 }
+
+/* Mobile app-like feel */
+@media (max-width: 767px) {
+  html, body {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Native-feeling card outlines on small screens */
+  .shadow-card {
+    @apply border border-border;
+  }
+}

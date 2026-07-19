@@ -51,25 +51,26 @@ const Index = () => {
         className={`space-y-6 ${preferences.appearance.compactMode ? 'space-y-4' : ''}`}
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex items-center justify-between">
+        <motion.div variants={itemVariants} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back! Let's make today productive.</p>
+            <p className="text-sm text-muted-foreground">Welcome back! Let's make today productive.</p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          </p>
         </motion.div>
 
         {/* Stats */}
         {dashboardWidgets.showStats && (
-          <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             {stats.map((stat, index) => (
-              <div key={index} className="rounded-xl bg-card p-4 shadow-card">
+              <div
+                key={index}
+                className={`rounded-2xl border border-border bg-card p-4 shadow-sm ${index === 2 ? "col-span-2 sm:col-span-1" : ""}`}
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{stat.label}</span>
+                  <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
                   <stat.icon className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <p className="mt-1 text-2xl font-bold text-foreground">{stat.value}</p>
@@ -99,15 +100,15 @@ const Index = () => {
         {/* Quick Actions */}
         {dashboardWidgets.showQuickActions && (
           <motion.div variants={itemVariants}>
-            <h2 className="mb-4 text-lg font-semibold text-foreground">Quick Actions</h2>
-            <div className="grid grid-cols-3 gap-4">
+            <h2 className="mb-3 text-base font-semibold text-foreground sm:mb-4 sm:text-lg">Quick Actions</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               {quickActions.map((action, index) => (
                 <Link
                   key={index}
                   to={action.path}
-                  className="group flex items-center gap-3 rounded-xl bg-card p-4 shadow-card transition-all hover:shadow-card-hover"
+                  className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all active:scale-[0.98] hover:shadow-md"
                 >
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${action.color}`}>
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${action.color}`}>
                     <action.icon className="h-5 w-5" />
                   </div>
                   <span className="font-medium text-foreground group-hover:text-primary transition-colors">
