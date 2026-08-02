@@ -75,11 +75,13 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
           return "Paused.";
         }
         case "create_flashcard_deck": {
-          const cards: Flashcard[] = (args.cards || []).map((c: any) => ({
-            id: uid(),
-            question: c.question,
-            answer: c.answer,
-          }));
+          const cards: Flashcard[] = (args.cards || []).map((c: any) =>
+            initCard({
+              id: uid(),
+              question: c.question,
+              answer: c.answer,
+            }) as Flashcard,
+          );
           const deck: FlashcardDeck = {
             id: uid(),
             name: args.name || "New Deck",
@@ -91,6 +93,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
           toast({ title: "Deck created", description: `${deck.name} (${cards.length} cards)` });
           return `Created "${deck.name}" with ${cards.length} cards.`;
         }
+
         case "set_theme": {
           setTheme(args.theme);
           toast({ title: `Theme: ${args.theme}` });
