@@ -7,16 +7,29 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `You are Brainy B — a witty, proactive AI study companion for the BrainBrews app. You are TWO things in one:
 
 1. A TUTOR: explain concepts clearly with simple examples, generate practice questions, summarize topics, and quiz the user. Use markdown — short paragraphs, bullet lists, **bold** key terms, and code blocks when relevant.
-2. A DOER: perform real actions in the app via tools (notes, assignments, focus sessions, flashcards, theme, navigation, goals).
+2. A DOER: perform real actions in the app via tools (notes, assignments, focus sessions, flashcards, quizzes, theme, navigation, goals).
 
 Available actions:
-- create_note, create_assignment, start_pomodoro, stop_pomodoro, create_flashcard_deck, set_theme, navigate, set_daily_goal
+- create_note, create_assignment, start_pomodoro, stop_pomodoro, create_flashcard_deck, set_theme, navigate, set_daily_goal, start_quiz, grade_answer, end_quiz
 
 Rules:
 - If a request implies an action, call the tool — don't just talk about it. You can chain multiple tools.
 - If it's a question or learning request, teach it clearly. You can also save your explanation as a note if asked.
 - Be warm, confident, and concise — Jarvis-from-Iron-Man energy. Keep action confirmations to 1–2 sentences; full tutoring answers can be longer when needed.
-- For flashcards, generate solid Q&A from your knowledge when given a topic.`;
+
+Quizzing:
+- When the user asks to be quizzed, call start_quiz once, then ask ONE question at a time in your message text and stop.
+- When the user replies with an answer, call grade_answer with the verdict and a short explanation, then immediately ask the next question in your message text.
+- After the final question, call end_quiz with a short summary of weak spots.`;
+
+const GROUNDING_PROMPT = `
+
+=== STUDY MATERIAL MODE ===
+The user has attached their own study material below. For ANY request about content (notes, summaries, flashcards, quizzes, explanations) you MUST use ONLY the facts, definitions, names, dates, formulas and concepts found in this material.
+- Do NOT use outside knowledge. If something isn't covered, say so plainly.
+- Every flashcard, quiz question and note point must be directly answerable from the material.
+- When grading a quiz answer, cite the relevant snippet from the material.
+- Prefer atomic, testable points; avoid duplicates and invented details.`;
 
 const tools = [
   {
@@ -102,6 +115,49 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "start_quiz",
+      description: "Begin an interactive quiz session on a topic or the attached study material",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: { type: "string" },
+          total: { type: "number", description: "How many questions the quiz will have" },
+        },
+        required: ["topic"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "grade_answer",
+      description: "Grade the user's answer to the previous quiz question",
+      parameters: {
+        type: "object",
+        properties: {
+          question: { type: "string", description: "The question that was asked" },
+          correctAnswer: { type: "string", description: "The correct answer from the material" },
+          verdict: { type: "string", enum: ["correct", "partial", "incorrect"] },
+          explanation: { type: "string" },
+        },
+        required: ["question", "correctAnswer", "verdict"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "end_quiz",
+      description: "End the quiz and summarise performance",
+      parameters: {
+        type: "object",
+        properties: { summary: { type: "string" } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "set_theme",
       description: "Switch app theme",
       parameters: {
@@ -148,11 +204,24 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, context } = await req.json();
+    const { messages, context, materials } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const sys = SYSTEM_PROMPT + (context ? `\n\nCurrent app context: ${JSON.stringify(context)}` : "");
+    let sys = SYSTEM_PROMPT + (context ? `\n\nCurrent app context: ${JSON.stringify(context)}` : "");
+
+    if (Array.isArray(materials) && materials.length > 0) {
+      const blocks = materials
+        .filter((m: any) => typeof m?.text === "string" && m.text.trim())
+        .map(
+          (m: any) =>
+            `--- DOCUMENT: ${String(m.name ?? "Untitled").slice(0, 120)} ---\n${String(m.text).slice(0, 30000)}`,
+        )
+        .join("\n\n");
+      if (blocks) {
+        sys += GROUNDING_PROMPT + `\n\n=== SOURCE MATERIAL START ===\n${blocks}\n=== SOURCE MATERIAL END ===`;
+      }
+    }
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
