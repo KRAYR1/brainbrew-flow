@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Note, Assignment, FlashcardDeck, Flashcard } from "@/types";
 import { usePreferences } from "./PreferencesContext";
+import { initCard } from "@/lib/srs";
+
 
 export type AssistantAction = { name: string; args: any };
 
