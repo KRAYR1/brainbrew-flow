@@ -1,44 +1,34 @@
 ## Goal
-Make BrainBrews fully responsive so it fits properly on iPhone and Android screens (and tablets), instead of the current desktop-only layout that assumes a fixed 256px sidebar and wide viewport.
 
-## Current problem
-- `Layout.tsx` hardcodes `ml-64` on `<main>`, so on a 375px phone the content is pushed off-screen behind a 256px sidebar.
-- `Sidebar.tsx` is a fixed `w-64` left rail always visible — no mobile drawer/hamburger.
-- Several pages use desktop-first grids (`grid-cols-3`, wide cards, right-aligned headers) that squash on small screens.
-- `viewport-fit=cover` is set, but no safe-area padding is applied, so iPhone notch/home-indicator overlaps content.
-- Pomodoro, Flashcards, Chat, Calendar, Timetable have wide fixed elements that overflow on mobile.
+Let users upload study materials inside Brainy B, then ask it to do whatever they want with them — make notes, build a flashcard deck, or quiz them with grading and explanations — always grounded in the uploaded content.
 
-## What to build
+## 1. Study Materials library
 
-### 1. Responsive shell (biggest win)
-- Convert `Layout.tsx` + `Sidebar.tsx` into a responsive shell:
-  - **Mobile (<768px):** sidebar becomes a slide-in drawer (shadcn `Sheet`), triggered by a top hamburger bar. Main content is full width, no left margin. Bottom tab bar for the 4–5 most-used routes (Dashboard, Notes, Assignments, Chat, Flashcards) for native-app feel.
-  - **Tablet/Desktop (≥768px):** keep current fixed sidebar, `ml-64` main.
-- Add a compact top app bar on mobile showing the current page title + hamburger + streak chip.
-- Apply iOS safe-area insets (`env(safe-area-inset-top/bottom)`) to the top bar and bottom tab bar so notch/home-indicator don't overlap.
+- New "Materials" panel on the Brainy B chat page (drawer on mobile, side panel on desktop).
+- Drag-and-drop or file-picker upload of PDF, DOCX, TXT, MD. Text is extracted in the browser with the existing extractor, so files never leave the device — only text is sent.
+- Each material is saved locally with name, extracted text, word count, and date. Users can rename, delete, and preview.
+- Checkbox per material to include it in the current request. A header chip shows "3 materials active".
+- Long materials are trimmed to a safe size before sending, with the most relevant sections prioritized.
 
-### 2. Page-level responsive passes
-Sweep each page and swap desktop grids for `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` patterns, shrink paddings on mobile (`p-4 lg:p-8`), stack header rows, and make tables/wide cards horizontally scrollable where needed:
-- `Index` (dashboard) — stats grid 1→3 cols, header stacks.
-- `Notes`, `Assignments`, `Flashcards`, `Calendar`, `Timetable`, `Chat`, `Settings` — same treatment; make modals/dialogs full-screen on mobile.
-- `Auth` — center card, ensure it fits 320px width.
-- `DemoBanner` — wrap to two lines / condense buttons on mobile.
-- `FocusGuardOverlay` — ensure the cat + chat panel fit within small viewports.
-- `PomodoroTimer` — shrink dial and controls for mobile.
+## 2. Grounded Brainy B
 
-### 3. Global CSS tweaks (`index.css`)
-- Add `html, body { overscroll-behavior-y: none; }` for app-like feel.
-- Add safe-area utility classes: `.pt-safe`, `.pb-safe`.
-- Ensure base font sizes and tap targets are ≥44px on mobile.
+- Selected material text is passed to the assistant as clearly delimited source material, with instructions to answer only from it and to say when something isn't covered.
+- Brainy B decides what to do based on the user's request — no mode switch needed:
+  - "make notes on this" → creates a note in Notes, grounded in the material
+  - "make me a deck" → creates a flashcard deck with SM-2 fields initialized, opens in Flashcards
+  - "quiz me" → starts an in-chat quiz
+- Quick-action buttons above the composer (Summarize, Make notes, Make a deck, Quiz me) just prefill the message, so everything stays conversational.
 
-### 4. Preview
-- Switch preview to mobile viewport so you can see the changes immediately.
+## 3. Quiz mode with grading
 
-## Out of scope
-- No changes to business logic, data, auth flow, AI, or Pomodoro behavior.
-- No new native (Capacitor) packaging — it stays a PWA. (Say the word if you also want the native Capacitor wrap.)
+- Brainy B asks one question at a time from the material, waits for the answer, then grades it (correct / partially correct / incorrect), explains why, cites the relevant part of the source, and moves on.
+- Running score shown in the chat header while a quiz is active; end-of-quiz summary lists weak spots.
+- A "Save as deck" action turns the quizzed questions into a flashcard deck.
 
 ## Technical notes
-- Reuse existing shadcn `Sheet` for the drawer — no new deps.
-- `useIsMobile()` hook already exists at `src/hooks/use-mobile.tsx`; use it to conditionally render drawer vs fixed sidebar and bottom tab bar.
-- Bottom tab bar will add ~64px + safe-area bottom padding to main content on mobile only.
+
+- New `src/hooks/useStudyMaterials.ts` (localStorage-backed) and `src/components/chat/MaterialsPanel.tsx`; `Material` type added to `src/types/index.ts`.
+- `src/pages/Chat.tsx` gains the panel, quick actions, and passes `materials` in the request context.
+- `supabase/functions/jarvis-assistant/index.ts`: accepts a `materials` payload, injects it as grounded source material in the system prompt, adds `start_quiz`, `grade_answer`, and `end_quiz` tools alongside the existing ones, and keeps the strict no-outside-knowledge rule from the flashcard function.
+- `src/contexts/AssistantContext.tsx`: handles the new quiz tools and ensures AI-created decks get SM-2 fields via `initCard`.
+- Storage guard: warn when total material text approaches the browser storage limit.

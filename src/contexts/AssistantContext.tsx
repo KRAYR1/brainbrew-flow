@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Note, Assignment, FlashcardDeck, Flashcard } from "@/types";
 import { usePreferences } from "./PreferencesContext";
+import { initCard } from "@/lib/srs";
+
 
 export type AssistantAction = { name: string; args: any };
 
@@ -75,11 +77,13 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
           return "Paused.";
         }
         case "create_flashcard_deck": {
-          const cards: Flashcard[] = (args.cards || []).map((c: any) => ({
-            id: uid(),
-            question: c.question,
-            answer: c.answer,
-          }));
+          const cards: Flashcard[] = (args.cards || []).map((c: any) =>
+            initCard({
+              id: uid(),
+              question: c.question,
+              answer: c.answer,
+            }) as Flashcard,
+          );
           const deck: FlashcardDeck = {
             id: uid(),
             name: args.name || "New Deck",
@@ -91,6 +95,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
           toast({ title: "Deck created", description: `${deck.name} (${cards.length} cards)` });
           return `Created "${deck.name}" with ${cards.length} cards.`;
         }
+
         case "set_theme": {
           setTheme(args.theme);
           toast({ title: `Theme: ${args.theme}` });

@@ -29,6 +29,16 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+export interface StudyMaterial {
+  id: string;
+  name: string;
+  text: string;
+  wordCount: number;
+  createdAt: string;
+  selected: boolean;
+}
+
+
 export interface Flashcard {
   id: string;
   question: string;
